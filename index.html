@@ -238,8 +238,9 @@
     <div class="actions">
       <div class="bar"><i id="prog"></i></div>
       <div class="row">
-        <button class="btn" id="playBtn">Play preview</button>
-        <button class="btn primary" id="dlBtn">⬇ Download video</button>
+        <button class="btn" id="playBtn">Preview</button>
+        <button class="btn" id="recBtn">● Record</button>
+        <button class="btn primary" id="dlBtn">⬇ Download</button>
       </div>
       <div class="status" id="status">1080 × 1920 MP4 · 30 fps · ready in a few seconds.</div>
     </div>
@@ -2329,7 +2330,7 @@ function changed() {
 }
 function qualityText() {
   const q = QUALITY[$('quality').value];
-  $('status').textContent = `${q.label} MP4 · 30 fps` + (q.w > 1080 ? ' · bigger file, takes longer' : ' · ready in a few seconds.');
+  $('status').textContent = `${q.label} · Download makes the MP4 in seconds. Record plays the reel once and saves it.` + (q.w > 1080 ? ' Bigger files take longer.' : '');
 }
 $('quality').addEventListener('change', () => { qualityText(); try { localStorage.setItem('reel-quality', $('quality').value); } catch (e) {} });
 try { const q = localStorage.getItem('reel-quality'); if (q && QUALITY[q]) $('quality').value = q; } catch (e) {}
@@ -2385,231 +2386,124 @@ try { Object.assign(look, JSON.parse(localStorage.getItem('reel-look') || '{}'))
 $('dim').value = Math.round(look.dim * 100);
 
 // ================= MUSIC =================
-// Original music generated live with Web Audio. Routed to speakers and to the recorder.
-const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
-let A = null, master = null, recDest = null, engine = null, upAudio = null;
-let track = 'lofi', musicOn = false, fileSrc = null;
-
-// Built-in tracks are MP3 files in the music/ folder next to this page.
-// Change MUSIC_BASE to a full URL if you host the files somewhere else.
+// Music always comes from a real audio file: a built-in track in music/ or the user's own song.
+const IS_MOBILE = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+// Change MUSIC_BASE to a full URL if the music folder lives somewhere else.
 const MUSIC_BASE = window.MUSIC_BASE || 'music/';
-const TRACK_FILES = { lofi: 'lofi-study.mp3', piano: 'soft-piano.mp3', calm: 'calm-pad.mp3', upbeat: 'upbeat-pop.mp3' };
-const trackBytes = {}, trackBufs = {};
-async function trackData(name) {
-  if (!TRACK_FILES[name]) return null;
-  if (name in trackBytes) return trackBytes[name];
-  try { const r = await fetch(MUSIC_BASE + TRACK_FILES[name]); if (!r.ok) throw 0; trackBytes[name] = await r.arrayBuffer(); }
-  catch (e) { trackBytes[name] = null; }   // file not reachable: generate the track live instead
-  return trackBytes[name];
+const TRACKS = {
+  lofi:   { mp3: 'lofi-study.mp3', aac: 'lofi-study.aac' },
+  piano:  { mp3: 'soft-piano.mp3', aac: 'soft-piano.aac' },
+  calm:   { mp3: 'calm-pad.mp3',   aac: 'calm-pad.aac' },
+  upbeat: { mp3: 'upbeat-pop.mp3', aac: 'upbeat-pop.aac' },
+};
+let A = null, master = null, recDest = null, playSrc = null;
+let track = 'lofi', musicOn = false;
+const bytesCache = {}, bufCache = {};
+
+const upFile = () => $('music').files[0];
+function hasMusic() { return track !== 'none' && !(track === 'upload' && !upFile()); }
+function volume() { return $('vol').value / 100; }
+
+async function fetchBytes(url) {
+  if (url in bytesCache) return bytesCache[url];
+  let r;
+  try { r = await fetch(url); } catch (e) { throw new Error('music-missing'); }
+  if (!r.ok) throw new Error('music-missing');
+  return (bytesCache[url] = await r.arrayBuffer());
+}
+async function musicBytes() {
+  if (track === 'upload') return upFile().arrayBuffer();
+  return fetchBytes(MUSIC_BASE + TRACKS[track].mp3);
+}
+function decode(ctx, bytes) {            // promise + callback form, for older Safari
+  return new Promise((ok, bad) => {
+    try { const p = ctx.decodeAudioData(bytes.slice(0), ok, bad); if (p && p.then) p.then(ok, bad); }
+    catch (e) { bad(e); }
+  }).catch(() => { throw new Error('music-decode'); });
+}
+async function liveBuffer() {
+  const key = track === 'upload' ? 'up:' + upFile().name + ':' + upFile().size : track;
+  if (!bufCache[key]) bufCache[key] = await decode(A, await musicBytes());
+  return bufCache[key];
+}
+function musicError() {
+  $('status').textContent = track === 'upload'
+    ? 'Could not read that song. Try an MP3 or M4A file.'
+    : `Could not load ${MUSIC_BASE}${TRACKS[track].mp3}. Make sure the music folder is uploaded next to index.html.`;
 }
 
+// iOS mutes Web Audio when the ringer switch is on silent, unless a normal <audio>
+// element is playing. A silent looping <audio> puts the page in "playback" mode.
+let silentEl = null;
+function silentWavURL() {
+  const n = 4410, b = new DataView(new ArrayBuffer(44 + n));
+  const w = (o, t) => { for (let i = 0; i < t.length; i++) b.setUint8(o + i, t.charCodeAt(i)); };
+  w(0, 'RIFF'); b.setUint32(4, 36 + n, true); w(8, 'WAVE'); w(12, 'fmt '); b.setUint32(16, 16, true);
+  b.setUint16(20, 1, true); b.setUint16(22, 1, true); b.setUint32(24, 44100, true); b.setUint32(28, 44100, true);
+  b.setUint16(32, 1, true); b.setUint16(34, 8, true); w(36, 'data'); b.setUint32(40, n, true);
+  for (let i = 0; i < n; i++) b.setUint8(44 + i, 128);
+  return URL.createObjectURL(new Blob([b.buffer], { type: 'audio/wav' }));
+}
 function ensureAudio() {
   if (A) return;
   A = new (window.AudioContext || window.webkitAudioContext)();
   master = A.createGain(); master.gain.value = 0;
-  const comp = A.createDynamicsCompressor();
-  comp.threshold.value = -16; comp.ratio.value = 4;
-  master.connect(comp);
-  comp.connect(A.destination);
-  recDest = A.createMediaStreamDestination();
-  comp.connect(recDest);
-  engine = new Engine(A, master);
+  master.connect(A.destination);
+  if (A.createMediaStreamDestination) { recDest = A.createMediaStreamDestination(); master.connect(recDest); }
 }
-
-class Engine {
-  constructor(a, out) {
-    this.a = a; this.out = out;
-    const len = a.sampleRate * 1.5;
-    this.noise = a.createBuffer(1, len, a.sampleRate);
-    const d = this.noise.getChannelData(0); for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
-    const rl = a.sampleRate * 2.6;
-    this.impulse = a.createBuffer(2, rl, a.sampleRate);
-    for (let c = 0; c < 2; c++) { const x = this.impulse.getChannelData(c); for (let i = 0; i < rl; i++) x[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / rl, 3); }
+function unlockAudio() {                  // call first thing inside a tap, before any await
+  try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
+  ensureAudio();
+  try { A.resume(); } catch (e) {}
+  try { const s = A.createBufferSource(); s.buffer = A.createBuffer(1, 1, A.sampleRate); s.connect(A.destination); s.start(); } catch (e) {}
+  if (IS_MOBILE) {
+    if (!silentEl) { silentEl = new Audio(silentWavURL()); silentEl.loop = true; silentEl.setAttribute('playsinline', ''); }
+    silentEl.play().catch(() => {});
   }
-  build(name) {
-    const a = this.a, st = STYLES[name]; if (!st) return false;
-    this.style = st;
-    this.bus = a.createGain(); this.bus.gain.value = st.level;
-    const tone = a.createBiquadFilter(); tone.type = 'lowpass'; tone.frequency.value = st.tone;
-    const conv = a.createConvolver(); conv.buffer = this.impulse;
-    const wet = a.createGain(); wet.gain.value = st.wet;
-    this.dry = a.createGain();
-    this.dry.connect(tone); this.dry.connect(conv); conv.connect(wet); wet.connect(tone);
-    tone.connect(this.bus); this.bus.connect(this.out);
-    this.step = 0;
-    return true;
-  }
-  start(name) {
-    this.stop();
-    if (!this.build(name)) return;
-    this.next = this.a.currentTime + 0.08;
-    this.timer = setInterval(() => this.tick(), 25);
-  }
-  scheduleAll(name, seconds) {         // offline: queue every note up front
-    if (!this.build(name)) return;
-    this.next = 0.02;
-    const sd = 60 / this.style.bpm / 4;
-    while (this.next < seconds) this.playStep(sd);
-  }
-  playStep(sd) {
-    const st = this.style;
-    const ch = st.chords[Math.floor(this.step / 16) % st.chords.length];
-    st.play(this, this.step % 16, this.next, ch, sd, Math.floor(this.step / 16));
-    this.next += sd; this.step++;
-  }
-  tick() {
-    const sd = 60 / this.style.bpm / 4;
-    while (this.next < this.a.currentTime + 0.2) this.playStep(sd);
-  }
-  stop() {
-    if (!this.bus) return;
-    clearInterval(this.timer);
-    const b = this.bus; b.gain.setTargetAtTime(0, this.a.currentTime, 0.12);
-    setTimeout(() => b.disconnect(), 1500);
-    this.bus = null;
-  }
-  env(t, v, att, dec) {
-    const g = this.a.createGain();
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.linearRampToValueAtTime(v, t + att);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + att + dec);
-    g.connect(this.dry); return g;
-  }
-  osc(type, f, t, end, dest, detune = 0) {
-    const o = this.a.createOscillator(); o.type = type; o.frequency.value = f; o.detune.value = detune;
-    o.connect(dest); o.start(t); o.stop(end); return o;
-  }
-  keys(t, n, v, dec = 1.6) {          // soft electric-piano tone
-    const g = this.env(t, v, 0.008, dec);
-    const lp = this.a.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2400; lp.connect(g);
-    this.osc('triangle', mtof(n), t, t + dec + 0.1, lp);
-    const g2 = this.a.createGain(); g2.gain.value = 0.25; g2.connect(lp);
-    this.osc('sine', mtof(n + 12), t, t + dec + 0.1, g2);
-  }
-  pad(t, notes, dur, v = 0.04) {
-    const g = this.a.createGain();
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.linearRampToValueAtTime(v, t + Math.min(1.2, dur * 0.4));
-    g.gain.setValueAtTime(v, t + dur * 0.8);
-    g.gain.linearRampToValueAtTime(0.0001, t + dur + 0.8);
-    const lp = this.a.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 900; lp.connect(g); g.connect(this.dry);
-    for (const n of notes) { this.osc('sawtooth', mtof(n), t, t + dur + 1, lp, -7); this.osc('sawtooth', mtof(n), t, t + dur + 1, lp, 7); }
-  }
-  pluck(t, n, v) {
-    const g = this.env(t, v, 0.004, 0.32);
-    const lp = this.a.createBiquadFilter(); lp.type = 'lowpass';
-    lp.frequency.setValueAtTime(3200, t); lp.frequency.exponentialRampToValueAtTime(500, t + 0.22); lp.connect(g);
-    this.osc('sawtooth', mtof(n), t, t + 0.4, lp);
-  }
-  bass(t, n, dur, v) {
-    const g = this.env(t, v, 0.01, dur);
-    this.osc('triangle', mtof(n), t, t + dur + 0.1, g);
-    const g2 = this.a.createGain(); g2.gain.value = 0.6; g2.connect(g);
-    this.osc('sine', mtof(n), t, t + dur + 0.1, g2);
-  }
-  kick(t, v) {
-    const g = this.a.createGain(); g.connect(this.dry);
-    g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.38);
-    const o = this.osc('sine', 140, t, t + 0.4, g);
-    o.frequency.setValueAtTime(140, t); o.frequency.exponentialRampToValueAtTime(42, t + 0.14);
-  }
-  noiseHit(t, v, type, f, dec) {
-    const s = this.a.createBufferSource(); s.buffer = this.noise;
-    const fl = this.a.createBiquadFilter(); fl.type = type; fl.frequency.value = f;
-    const g = this.env(t, v, 0.002, dec);
-    s.connect(fl); fl.connect(g); s.start(t); s.stop(t + dec + 0.05);
-  }
-  snare(t, v) { this.noiseHit(t, v, 'bandpass', 1800, 0.18); }
-  hat(t, v) { this.noiseHit(t, v, 'highpass', 7500, 0.04); }
 }
-
-const pick = arr => arr[Math.floor(Math.random() * arr.length)];
-const STYLES = {
-  piano: { bpm: 76, level: 1, tone: 9000, wet: 0.45,
-    chords: [{ r: 36, v: [60, 64, 67, 72] }, { r: 43, v: [59, 62, 67, 71] }, { r: 45, v: [60, 64, 69, 72] }, { r: 41, v: [60, 65, 69, 72] }],
-    play(e, s, t, c, sd) {
-      if (s === 0) { e.keys(t, c.r + 12, 0.16, 3.2); e.keys(t, c.r + 24, 0.09, 3); }
-      if (s % 2 === 0) e.keys(t, c.v[[0, 1, 2, 3, 2, 1, 2, 1][s / 2]], 0.1 + Math.random() * 0.03, 1.8);
-    } },
-  lofi: { bpm: 78, level: 1, tone: 2800, wet: 0.3,
-    chords: [{ r: 41, v: [57, 60, 64, 65] }, { r: 40, v: [55, 59, 62, 64] }, { r: 38, v: [53, 57, 60, 62] }, { r: 36, v: [52, 55, 59, 60] }],
-    play(e, s, t, c, sd) {
-      const sw = (s % 4 === 2) ? sd * 0.28 : 0;      // swing
-      if (s === 0 || s === 10) { c.v.forEach((n, i) => e.keys(t + sw + i * 0.014, n, 0.065, 2.4)); e.bass(t + sw, c.r, sd * 5, 0.3); }
-      if (s === 0 || s === 7 || s === 10) e.kick(t + sw, s === 0 ? 0.7 : 0.5);
-      if (s === 4 || s === 12) e.snare(t, 0.16);
-      if (s % 2 === 0) e.hat(t + sw, s % 4 === 0 ? 0.05 : 0.03);
-    } },
-  calm: { bpm: 60, level: 1, tone: 6000, wet: 0.6,
-    chords: [{ r: 36, v: [60, 64, 67, 71] }, { r: 45, v: [57, 60, 64, 67] }, { r: 41, v: [57, 60, 65, 69] }, { r: 43, v: [55, 59, 62, 67] }],
-    play(e, s, t, c, sd) {
-      if (s === 0) { e.pad(t, c.v, sd * 16, 0.035); e.bass(t, c.r, sd * 14, 0.12); }
-      if ((s === 0 || s === 6 || s === 10) && Math.random() < 0.7) e.keys(t, pick(c.v) + 12, 0.05, 3.5);
-    } },
-  upbeat: { bpm: 112, level: 0.85, tone: 10000, wet: 0.2,
-    chords: [{ r: 45, v: [57, 60, 64, 69] }, { r: 41, v: [57, 60, 65, 69] }, { r: 36, v: [55, 60, 64, 67] }, { r: 43, v: [55, 59, 62, 67] }],
-    play(e, s, t, c, sd) {
-      if (s % 4 === 0) e.kick(t, 0.75);
-      if (s === 4 || s === 12) e.snare(t, 0.22);
-      e.hat(t, s % 4 === 2 ? 0.07 : 0.022);
-      e.pluck(t, c.v[[0, 2, 1, 3][s % 4]] + (s >= 8 ? 12 : 0), 0.06);
-      if (s % 2 === 0) e.bass(t, c.r + (s % 4 === 2 ? 12 : 0), sd * 1.6, 0.26);
-      if (s === 0) e.pad(t, c.v, sd * 16, 0.02);
-    } },
-};
-
-function volume() { return $('vol').value / 100; }
 
 async function startMusic(totalSec) {
-  if (track === 'none') return false;
-  if (track === 'upload' && !$('music').files[0]) return false;
+  if (!hasMusic()) return false;
   ensureAudio();
-  await A.resume();
+  try { await A.resume(); } catch (e) {}
   stopMusic(true);
-  let buf = null;
-  if (track !== 'upload') {
-    const data = await trackData(track);
-    if (data) buf = trackBufs[track] || (trackBufs[track] = await A.decodeAudioData(data.slice(0)));
-  }
+  let buf;
+  try { buf = await liveBuffer(); } catch (e) { console.warn(e); musicError(); return false; }
   const now = A.currentTime, v = volume();
   master.gain.cancelScheduledValues(now);
   master.gain.setValueAtTime(0, now);
-  master.gain.linearRampToValueAtTime(v, now + 1);
-  if (totalSec) {                                   // fade out over the last 2 seconds
-    master.gain.setValueAtTime(v, now + Math.max(1, totalSec - 2));
+  master.gain.linearRampToValueAtTime(v, now + 0.6);
+  if (totalSec) {                          // fade out over the last 2 seconds
+    master.gain.setValueAtTime(v, now + Math.max(0.6, totalSec - 2));
     master.gain.linearRampToValueAtTime(0, now + totalSec);
   }
-  if (track === 'upload') {
-    upAudio = new Audio(URL.createObjectURL($('music').files[0])); upAudio.loop = true;
-    A.createMediaElementSource(upAudio).connect(master);
-    await upAudio.play();
-  } else if (buf) {
-    fileSrc = A.createBufferSource(); fileSrc.buffer = buf; fileSrc.loop = true;
-    fileSrc.connect(master); fileSrc.start();
-  } else engine.start(track);
+  playSrc = A.createBufferSource(); playSrc.buffer = buf; playSrc.loop = true;
+  playSrc.connect(master); playSrc.start(now);
   musicOn = true;
   return true;
 }
 function stopMusic(instant) {
   if (!A) return;
   if (!instant) master.gain.setTargetAtTime(0, A.currentTime, 0.15);
-  engine.stop();
-  if (fileSrc) { const f = fileSrc; fileSrc = null; try { f.stop(A.currentTime + (instant ? 0 : 0.5)); } catch (e) {} }
-  if (upAudio) { const u = upAudio; upAudio = null; setTimeout(() => u.pause(), instant ? 0 : 500); }
+  if (playSrc) { const s = playSrc; playSrc = null; try { s.stop(A.currentTime + (instant ? 0 : 0.5)); } catch (e) {} }
   musicOn = false;
+  if (silentEl && !instant && !playing) silentEl.pause();
   $('listenBtn').textContent = '▶ Listen';
 }
 
 $('tracks').addEventListener('click', async e => {
   const b = e.target.closest('.track'); if (!b) return;
-  if (b.dataset.track === 'upload' && !$('music').files[0]) { $('music').click(); }
+  if (b.dataset.track !== 'none') unlockAudio();
+  if (b.dataset.track === 'upload' && !upFile()) $('music').click();
   track = b.dataset.track;
   $('tracks').querySelectorAll('.track').forEach(x => x.classList.toggle('on', x === b));
   if (musicOn && !playing) { const ok = await startMusic(); $('listenBtn').textContent = ok ? '■ Stop' : '▶ Listen'; }
 });
 $('music').addEventListener('change', () => {
-  const f = $('music').files[0];
-  if (f) $('tracks').querySelector('[data-track=upload] span').textContent = f.name;
+  const f = upFile(); if (!f) return;
+  $('tracks').querySelector('[data-track=upload] span').textContent = f.name;
+  track = 'upload';
+  $('tracks').querySelectorAll('.track').forEach(x => x.classList.toggle('on', x.dataset.track === 'upload'));
 });
 $('vol').addEventListener('input', () => {
   $('volVal').textContent = $('vol').value + '%';
@@ -2617,32 +2511,37 @@ $('vol').addEventListener('input', () => {
 });
 $('listenBtn').onclick = async () => {
   if (musicOn) { stopMusic(); return; }
+  if (track === 'upload' && !upFile()) { $('music').click(); return; }
+  if (!hasMusic()) return;
+  unlockAudio();
   const ok = await startMusic();
   $('listenBtn').textContent = ok ? '■ Stop' : '▶ Listen';
-  if (!ok && track === 'upload') $('music').click();
 };
 
-// ================= PREVIEW & RECORD =================
+// ================= PREVIEW =================
+function setBusy(b) { ['playBtn', 'recBtn', 'dlBtn'].forEach(id => $(id).disabled = b); }
+function stopPreview() {
+  if (playing) { playing = false; cancelAnimationFrame(raf); }
+  stopMusic(true);
+  $('playBtn').textContent = 'Preview';
+}
 $('playBtn').onclick = async () => {
-  if (playing) { playing = false; cancelAnimationFrame(raf); stopMusic(); $('playBtn').textContent = 'Play preview'; changed(); return; }
+  if (playing) { stopPreview(); changed(); return; }
+  if (hasMusic()) unlockAudio();
   L = layout(); playing = true;
   if (innerWidth <= 860) cv.scrollIntoView({ behavior: 'smooth', block: 'start' });
   await startMusic(+durEl.value);
   startT = performance.now();
   $('playBtn').textContent = 'Stop';
-  loop(() => { $('playBtn').textContent = 'Play preview'; stopMusic(); });
+  loop(() => { $('playBtn').textContent = 'Preview'; stopMusic(); });
 };
 
-function pickMime() {
-  const opts = ['video/mp4;codecs=avc1.640028,mp4a.40.2', 'video/mp4;codecs=avc1,mp4a.40.2', 'video/mp4',
-                'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
-  return opts.find(m => window.MediaRecorder && MediaRecorder.isTypeSupported(m)) || '';
-}
-
-// ---------- export: always H.264 video + AAC audio in MP4 ----------
-// 1) Browser encoders (WebCodecs) when it has H.264 / AAC: fastest, no extra download.
-// 2) Otherwise a built-in converter (ffmpeg.wasm, ~32 MB, loaded once) turns the
-//    result into H.264 + AAC so it plays everywhere, including Instagram and WhatsApp.
+// ================= DOWNLOAD (fast) =================
+// Always H.264 video + AAC audio in MP4, so it plays everywhere with sound.
+//  - Browser has an AAC encoder: the music is mixed (volume + fades) and encoded.
+//  - No AAC encoder (iPhone, many Androids): the built-in track's ready-made AAC file
+//    is copied straight into the video. No encoder needed.
+//  - Own song + no AAC encoder: desktop uses a one-time converter; phones use Record.
 const FPS = 30, SR = 48000;
 const FF_BASE = window.FF_BASE || 'https://unpkg.com/';
 const FF = {
@@ -2664,32 +2563,44 @@ const pickOtherVideo = () => firstSupported([
   c => VideoEncoder.isConfigSupported({ codec: c.codec, width: c.width, height: c.height, bitrate: c.bitrate, framerate: c.framerate }));
 const AAC_CFG = { codec: 'mp4a.40.2', sampleRate: SR, numberOfChannels: 2, bitrate: 160_000 };
 async function aacSupported() {
-  try { return window.AudioEncoder && (await AudioEncoder.isConfigSupported(AAC_CFG)).supported; } catch (e) { return false; }
+  try { return !!window.AudioEncoder && (await AudioEncoder.isConfigSupported(AAC_CFG)).supported; } catch (e) { return false; }
 }
-// kept for older callers
-const pickVideoCodec = pickH264;
 
-async function renderMusic(seconds) {
+async function renderMusic(seconds) {      // mix the music offline with volume and fades
   const off = new OfflineAudioContext(2, Math.ceil(SR * seconds), SR);
-  const m = off.createGain();
-  const comp = off.createDynamicsCompressor(); comp.threshold.value = -16; comp.ratio.value = 4;
-  m.connect(comp); comp.connect(off.destination);
+  const m = off.createGain(); m.connect(off.destination);
   const v = volume();
   m.gain.setValueAtTime(0, 0);
-  m.gain.linearRampToValueAtTime(v, 1);
-  m.gain.setValueAtTime(v, Math.max(1, seconds - 2));
+  m.gain.linearRampToValueAtTime(v, 0.6);
+  m.gain.setValueAtTime(v, Math.max(0.6, seconds - 2));
   m.gain.linearRampToValueAtTime(0, seconds);
-  if (track === 'upload') {
-    const buf = await off.decodeAudioData(await $('music').files[0].arrayBuffer());
-    const src = off.createBufferSource(); src.buffer = buf; src.loop = true; src.connect(m); src.start(0);
-  } else {
-    const data = await trackData(track);
-    if (data) {
-      const src = off.createBufferSource(); src.buffer = await off.decodeAudioData(data.slice(0));
-      src.loop = true; src.connect(m); src.start(0);
-    } else new Engine(off, m).scheduleAll(track, seconds);
-  }
+  const src = off.createBufferSource(); src.buffer = await decode(off, await musicBytes());
+  src.loop = true; src.connect(m); src.start(0);
   return off.startRendering();
+}
+
+const ADTS_RATES = [96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000, 7350];
+async function aacPassthrough(seconds) {   // read the ready-made AAC file into frames
+  if (!TRACKS[track]) return null;
+  const b = new Uint8Array(await fetchBytes(MUSIC_BASE + TRACKS[track].aac));
+  const base = []; let i = 0, cfg = null, dur = 0;
+  while (i + 7 <= b.length) {
+    if (b[i] !== 0xFF || (b[i + 1] & 0xF0) !== 0xF0) { i++; continue; }
+    const noCrc = b[i + 1] & 1, prof = (b[i + 2] >> 6) & 3, fi = (b[i + 2] >> 2) & 15;
+    const ch = ((b[i + 2] & 1) << 2) | (b[i + 3] >> 6);
+    const len = ((b[i + 3] & 3) << 11) | (b[i + 4] << 3) | (b[i + 5] >> 5), hl = noCrc ? 7 : 9;
+    if (len <= hl || i + len > b.length) break;
+    if (!cfg) {
+      const asc = ((prof + 1) << 11) | (fi << 7) | (ch << 3);
+      cfg = { codec: 'mp4a.40.2', sampleRate: ADTS_RATES[fi], numberOfChannels: ch, description: new Uint8Array([asc >> 8, asc & 255]) };
+      dur = 1024 / ADTS_RATES[fi] * 1e6;
+    }
+    base.push(b.slice(i + hl, i + len)); i += len;
+  }
+  if (!cfg || !base.length) return null;
+  const frames = [], limit = seconds * 1e6;
+  for (let k = 0, ts = 0; ts < limit; k = (k + 1) % base.length, ts += dur) frames.push({ data: base[k], ts });
+  return { frames, cfg, dur };
 }
 
 function toWav(buf) {
@@ -2710,195 +2621,224 @@ function toWav(buf) {
 const tick0 = () => new Promise(r => setTimeout(r, 0));
 const setProg = (pct, text) => { $('prog').style.width = pct + '%'; if (text) $('status').textContent = text; };
 
-let ffmpeg = null;
-async function loadFFmpeg() {
-  if (ffmpeg) return ffmpeg;
-  setProg(0, 'Loading video converter (about 32 MB, first time only)…');
-  if (!window.FFmpegWASM) await new Promise((ok, bad) => {
-    const sc = document.createElement('script'); sc.src = FF.lib; sc.onload = ok; sc.onerror = () => bad(new Error('converter-load')); document.head.appendChild(sc);
-  });
-  const blobURL = async (url, type) => URL.createObjectURL(new Blob([await (await fetch(url)).arrayBuffer()], { type }));
-  const [classWorkerURL, coreURL, wasmURL] = await Promise.all([
-    blobURL(FF.worker, 'text/javascript'), blobURL(FF.core, 'text/javascript'), blobURL(FF.wasm, 'application/wasm')]);
-  const f = new FFmpegWASM.FFmpeg();
-  await f.load({ classWorkerURL, coreURL, wasmURL });
-  ffmpeg = f;
-  return f;
-}
-
-async function encodeVideo(cfg, muxCodec) {
-  const muxer = new Mp4Muxer.Muxer({
-    target: new Mp4Muxer.ArrayBufferTarget(),
-    video: { codec: muxCodec, width: OUT.w, height: OUT.h, frameRate: FPS },
-    fastStart: 'in-memory', firstTimestampBehavior: 'offset',
-  });
-  let failed = null;
-  const venc = new VideoEncoder({ output: (c, m) => muxer.addVideoChunk(c, m), error: e => failed = e });
-  const { mux, ...encCfg } = cfg; venc.configure(encCfg);
+async function encodeFrames(venc, onFrame) {
   const total = Math.round(+durEl.value * FPS);
   for (let i = 0; i < total; i++) {
-    if (failed) throw failed;
     draw(i / (total - 1));
     const frame = new VideoFrame(cv, { timestamp: Math.round(i * 1e6 / FPS), duration: Math.round(1e6 / FPS) });
     venc.encode(frame, { keyFrame: i % (FPS * 2) === 0 });
     frame.close();
+    if (onFrame) onFrame(i);
     while (venc.encodeQueueSize > 8) await tick0();
-    if (i % 15 === 0) { setProg(Math.round(i / total * 100), `Rendering video… ${Math.round(i / total * 100)}%`); await tick0(); }
+    if (i % 15 === 0) { setProg(Math.round(i / total * 100), `Making video… ${Math.round(i / total * 100)}%`); await tick0(); }
   }
-  await venc.flush(); venc.close();
-  if (failed) throw failed;
-  return { muxer, venc };
 }
 
-// Everything in one pass when the browser has both H.264 and AAC encoders
-async function exportNative(vcfg, audioBuf) {
+// audio: null | { kind: 'encode', buf } | { kind: 'copy', frames, cfg, dur }
+async function exportNative(vcfg, audio) {
   const muxer = new Mp4Muxer.Muxer({
     target: new Mp4Muxer.ArrayBufferTarget(),
     video: { codec: 'avc', width: OUT.w, height: OUT.h, frameRate: FPS },
-    audio: audioBuf ? { codec: 'aac', numberOfChannels: 2, sampleRate: SR } : undefined,
+    audio: audio ? (audio.kind === 'copy'
+      ? { codec: 'aac', numberOfChannels: audio.cfg.numberOfChannels, sampleRate: audio.cfg.sampleRate }
+      : { codec: 'aac', numberOfChannels: 2, sampleRate: SR }) : undefined,
     fastStart: 'in-memory', firstTimestampBehavior: 'offset',
   });
-  let failed = null;
-  const venc = new VideoEncoder({ output: (c, m) => muxer.addVideoChunk(c, m), error: e => failed = e });
+  let failed = null, audioChunks = 0;
+  const venc = new VideoEncoder({ output: (c, m) => { try { muxer.addVideoChunk(c, m); } catch (e) { failed = e; } }, error: e => failed = e });
   venc.configure(vcfg);
-  const aenc = audioBuf ? new AudioEncoder({ output: (c, m) => muxer.addAudioChunk(c, m), error: e => failed = e }) : null;
-  if (aenc) aenc.configure(AAC_CFG);
 
-  const total = Math.round(+durEl.value * FPS);
-  const L0 = audioBuf && audioBuf.getChannelData(0), R0 = audioBuf && audioBuf.getChannelData(1);
-  let aPos = 0;
-  const feedAudio = untilSec => {             // interleave audio with video as we go
-    if (!aenc) return;
-    const end = Math.min(L0.length, Math.ceil(untilSec * SR));
-    while (aPos < end) {
-      const n = Math.min(4800, end - aPos);
-      const data = new Float32Array(n * 2);
-      data.set(L0.subarray(aPos, aPos + n), 0); data.set(R0.subarray(aPos, aPos + n), n);
-      const ad = new AudioData({ format: 'f32-planar', sampleRate: SR, numberOfFrames: n, numberOfChannels: 2,
-                                 timestamp: Math.round(aPos / SR * 1e6), data });
-      aenc.encode(ad); ad.close(); aPos += n;
-    }
-  };
-  for (let i = 0; i < total; i++) {
-    if (failed) throw failed;
-    draw(i / (total - 1));
-    const frame = new VideoFrame(cv, { timestamp: Math.round(i * 1e6 / FPS), duration: Math.round(1e6 / FPS) });
-    venc.encode(frame, { keyFrame: i % (FPS * 2) === 0 });
-    frame.close();
-    feedAudio((i + 1) / FPS);
-    while (venc.encodeQueueSize > 8) await tick0();
-    if (i % 15 === 0) { setProg(Math.round(i / total * 100), `Rendering video… ${Math.round(i / total * 100)}%`); await tick0(); }
+  let feed = null, aenc = null;
+  if (audio && audio.kind === 'encode') {
+    aenc = new AudioEncoder({ output: (c, m) => { try { muxer.addAudioChunk(c, m); audioChunks++; } catch (e) { failed = e; } }, error: e => failed = e });
+    aenc.configure(AAC_CFG);
+    const L0 = audio.buf.getChannelData(0), R0 = audio.buf.getChannelData(1);
+    let pos = 0;
+    feed = untilSec => {
+      const end = Math.min(L0.length, Math.ceil(untilSec * SR));
+      while (pos < end) {
+        const n = Math.min(4800, end - pos), data = new Float32Array(n * 2);
+        data.set(L0.subarray(pos, pos + n), 0); data.set(R0.subarray(pos, pos + n), n);
+        const ad = new AudioData({ format: 'f32-planar', sampleRate: SR, numberOfFrames: n, numberOfChannels: 2, timestamp: Math.round(pos / SR * 1e6), data });
+        aenc.encode(ad); ad.close(); pos += n;
+      }
+    };
   }
-  feedAudio(Infinity);
+  await encodeFrames(venc, i => { if (failed) throw failed; if (feed) feed((i + 1) / FPS); });
+  if (feed) feed(Infinity);
   await venc.flush(); venc.close();
   if (aenc) { await aenc.flush(); aenc.close(); }
+  if (audio && audio.kind === 'copy') {
+    audio.frames.forEach((f, k) => {
+      muxer.addAudioChunkRaw(f.data, 'key', Math.round(f.ts), Math.round(audio.dur), k === 0 ? { decoderConfig: audio.cfg } : undefined);
+      audioChunks++;
+    });
+  }
   if (failed) throw failed;
+  if (audio && audioChunks === 0) throw new Error('no-audio');   // never save a silent video by accident
   muxer.finalize();
   return new Blob([muxer.target.buffer], { type: 'video/mp4' });
 }
 
-async function fastExport() {
-  const seconds = +durEl.value;
-  const withMusic = track !== 'none' && !(track === 'upload' && !$('music').files[0]);
-  const h264 = await pickH264();
-  const aac = withMusic ? await aacSupported() : true;
+let ffmpeg = null;
+async function loadFFmpeg() {
+  if (ffmpeg) return ffmpeg;
+  setProg(0, 'Loading video converter (about 32 MB, first time only)…');
+  try {
+    if (!window.FFmpegWASM) await new Promise((ok, bad) => {
+      const sc = document.createElement('script'); sc.src = FF.lib; sc.onload = ok; sc.onerror = bad; document.head.appendChild(sc);
+    });
+    const blobURL = async (url, type) => URL.createObjectURL(new Blob([await (await fetch(url)).arrayBuffer()], { type }));
+    const [classWorkerURL, coreURL, wasmURL] = await Promise.all([
+      blobURL(FF.worker, 'text/javascript'), blobURL(FF.core, 'text/javascript'), blobURL(FF.wasm, 'application/wasm')]);
+    const f = new FFmpegWASM.FFmpeg();
+    await f.load({ classWorkerURL, coreURL, wasmURL });
+    return (ffmpeg = f);
+  } catch (e) { throw new Error('converter-load'); }
+}
 
-  await document.fonts.ready;
-  L = layout();
-  setProg(0, withMusic ? 'Mixing music…' : 'Preparing…');
-  const audioBuf = withMusic ? await renderMusic(seconds) : null;
-
-  if (h264 && aac) { saveBlob(await exportNative(h264, audioBuf), 'mp4'); setProg(100); return true; }
-
-  // Converter path
-  const other = h264 ? null : await pickOtherVideo();
-  if (!h264 && !other) return false;
-  const vcfg = h264 || other;
-  const { muxer } = await encodeVideo(vcfg, h264 ? 'avc' : vcfg.mux);
+async function convertExport(vcfg, audioBuf) {   // desktop only
+  const isH264 = vcfg.codec.startsWith('avc1');
+  const muxer = new Mp4Muxer.Muxer({
+    target: new Mp4Muxer.ArrayBufferTarget(),
+    video: { codec: isH264 ? 'avc' : vcfg.mux, width: OUT.w, height: OUT.h, frameRate: FPS },
+    fastStart: 'in-memory', firstTimestampBehavior: 'offset',
+  });
+  let failed = null;
+  const venc = new VideoEncoder({ output: (c, m) => { try { muxer.addVideoChunk(c, m); } catch (e) { failed = e; } }, error: e => failed = e });
+  const { mux, ...encCfg } = vcfg; venc.configure(encCfg);
+  await encodeFrames(venc, () => { if (failed) throw failed; });
+  await venc.flush(); venc.close();
+  if (failed) throw failed;
   muxer.finalize();
-  const videoBytes = new Uint8Array(muxer.target.buffer);
 
   const f = await loadFFmpeg();
-  await f.writeFile('v.mp4', videoBytes);
+  await f.writeFile('v.mp4', new Uint8Array(muxer.target.buffer));
   const args = ['-i', 'v.mp4'];
   if (audioBuf) { await f.writeFile('a.wav', toWav(audioBuf)); args.push('-i', 'a.wav', '-map', '0:v:0', '-map', '1:a:0'); }
-  if (h264) args.push('-c:v', 'copy');
+  if (isH264) args.push('-c:v', 'copy');
   else args.push('-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '20', '-pix_fmt', 'yuv420p');
   if (audioBuf) args.push('-c:a', 'aac', '-b:a', '160k');
   args.push('-movflags', '+faststart', 'out.mp4');
-
-  const label = h264 ? 'Adding music…' : 'Converting to MP4 (this browser needs the slow path, keep this tab open)…';
-  const onProg = ({ progress }) => setProg(Math.round(Math.max(0, Math.min(1, progress)) * 100), `${label} ${Math.round(Math.max(0, Math.min(1, progress)) * 100)}%`);
-  f.on('progress', onProg);
-  setProg(0, label);
+  const label = isH264 ? 'Adding music…' : 'Converting to MP4 (slow on this browser, keep the tab open)…';
+  const onProg = ({ progress }) => { const p = Math.round(Math.max(0, Math.min(1, progress)) * 100); setProg(p, `${label} ${p}%`); };
+  f.on('progress', onProg); setProg(0, label);
   const code = await f.exec(args);
   f.off('progress', onProg);
   if (code !== 0) throw new Error('convert-failed');
   const out = await f.readFile('out.mp4');
   await Promise.all(['v.mp4', 'a.wav', 'out.mp4'].map(n => f.deleteFile(n).catch(() => {})));
   saveBlob(new Blob([out.buffer], { type: 'video/mp4' }), 'mp4');
-  setProg(100);
-  return true;
+  return 'ok';
+}
+
+async function fastExport() {
+  if (!window.VideoEncoder || !window.VideoFrame || !window.Mp4Muxer) return 'need-record';
+  const seconds = +durEl.value, music = hasMusic();
+  await document.fonts.ready;
+  L = layout();
+  const h264 = await pickH264();
+  if (h264) {
+    let audio = null;
+    if (music) {
+      setProg(0, 'Preparing music…');
+      if (await aacSupported()) audio = { kind: 'encode', buf: await renderMusic(seconds) };
+      else if (track !== 'upload') { const p = await aacPassthrough(seconds); if (p) audio = { kind: 'copy', ...p }; }
+    }
+    if (!music || audio) { saveBlob(await exportNative(h264, audio), 'mp4'); return 'ok'; }
+    if (IS_MOBILE) return 'need-record';          // own song on a phone without an AAC encoder
+    return convertExport(h264, await renderMusic(seconds));
+  }
+  if (IS_MOBILE) return 'need-record';
+  const other = await pickOtherVideo();
+  if (!other) return 'need-record';
+  return convertExport(other, music ? await renderMusic(seconds) : null);
 }
 
 function saveBlob(blob, ext) {
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob); a.download = `reel-${Date.now()}.${ext}`;
-  a.textContent = `Download again (${(blob.size / 1e6).toFixed(1)} MB)`;
+  a.textContent = `Save again (${(blob.size / 1e6).toFixed(1)} MB)`;
   document.body.appendChild(a); a.click(); a.remove();
-  const s = $('status'); s.textContent = 'Downloaded. '; s.appendChild(a);
+  const s = $('status'); s.textContent = 'Saved. '; s.appendChild(a);
+  setProg(100);
 }
 
 $('dlBtn').onclick = async () => {
-  playing = false; cancelAnimationFrame(raf); stopMusic(true);
-  $('playBtn').textContent = 'Play preview';
-  $('dlBtn').disabled = true; $('playBtn').disabled = true;
+  stopPreview(); setBusy(true);
   OUT = QUALITY[$('quality').value]; useOutputSize(OUT);
   if (innerWidth <= 860) cv.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  let ok = false;
-  try { ok = window.VideoEncoder && window.Mp4Muxer ? await fastExport() : false; }
+  let res;
+  try { res = await fastExport(); }
   catch (e) {
     console.error(e);
-    if (String(e && e.message).startsWith('converter') || e instanceof TypeError) {
-      $('status').textContent = 'Could not load the video converter. Check your internet connection and try again.';
-      useOutputSize(QUALITY[1080]); $('dlBtn').disabled = false; $('playBtn').disabled = false; return;
-    }
-    ok = false;
+    const m = String(e && e.message);
+    res = m.startsWith('music') ? 'music' : m.startsWith('converter') ? 'converter' : 'error';
   }
-  if (ok) { useOutputSize(QUALITY[1080]); $('dlBtn').disabled = false; $('playBtn').disabled = false; draw(0.18); return; }
-  await recordRealtime();   // fallback for browsers without WebCodecs / AAC
+  useOutputSize(QUALITY[1080]); setBusy(false); draw(0.18);
+  if (res === 'ok') return;
+  setProg(0);
+  if (res === 'music') return musicError();
+  $('status').textContent = {
+    'need-record': 'This device can’t make the file instantly. Tap Record: it plays the reel once and saves it with music.',
+    converter: 'Could not load the video converter. Check your internet and try again, or tap Record.',
+    error: 'Something went wrong making the file. Tap Record instead, it works on every device.',
+  }[res];
+};
+
+// ================= RECORD (real time) =================
+function pickMime() {
+  const ios = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  // Real MP4 (H.264 + AAC) first. Plain "video/mp4" only on Apple, where it means H.264 + AAC;
+  // elsewhere it can hide VP9/Opus inside .mp4, which many players play without sound.
+  const opts = ios
+    ? ['video/mp4;codecs=avc1,mp4a.40.2', 'video/mp4']
+    : ['video/mp4;codecs=avc1.640028,mp4a.40.2', 'video/mp4;codecs=avc1,mp4a.40.2',
+       'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
+  return opts.find(m => window.MediaRecorder && MediaRecorder.isTypeSupported(m)) || '';
 }
 
 async function recordRealtime() {
-  if (!window.MediaRecorder) { $('status').textContent = 'This browser cannot make video. Use Chrome or Edge on a computer.'; $('dlBtn').disabled = false; $('playBtn').disabled = false; return; }
-  const mime = pickMime();
-  const stream = cv.captureStream(30);
-  const withMusic = track !== 'none' && !(track === 'upload' && !$('music').files[0]);
-  if (withMusic) { ensureAudio(); recDest.stream.getAudioTracks().forEach(t => stream.addTrack(t)); }
+  if (!window.MediaRecorder || !cv.captureStream) { $('status').textContent = 'This browser can’t record video. Try Chrome, Edge or Safari.'; return; }
+  const music = hasMusic();
+  stopPreview(); setBusy(true);
+  OUT = QUALITY[$('quality').value]; useOutputSize(OUT);
+  if (innerWidth <= 860) cv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const done = () => { useOutputSize(QUALITY[1080]); setBusy(false); draw(0.18); };
 
-  const rec = new MediaRecorder(stream, { mimeType: mime || undefined, videoBitsPerSecond: OUT.bitrate, audioBitsPerSecond: 160_000 });
+  const mime = pickMime();
+  const stream = cv.captureStream(FPS);
+  if (music) {
+    ensureAudio();
+    if (recDest) recDest.stream.getAudioTracks().forEach(t => stream.addTrack(t));
+  }
+  let rec;
+  try { rec = new MediaRecorder(stream, { mimeType: mime || undefined, videoBitsPerSecond: OUT.bitrate, audioBitsPerSecond: 160_000 }); }
+  catch (e) { rec = new MediaRecorder(stream); }
   const chunks = [];
   rec.ondataavailable = e => e.data.size && chunks.push(e.data);
   rec.onstop = () => {
     stopMusic();
     const type = rec.mimeType || mime || 'video/webm';
     const ext = type.includes('mp4') ? 'mp4' : 'webm';
-    const blob = new Blob(chunks, { type });
-    saveBlob(blob, ext);
-    if (ext === 'webm') $('status').append(' Instagram prefers MP4; convert the WebM with any free converter.');
-    useOutputSize(QUALITY[1080]); draw(0.18);
-    $('dlBtn').disabled = false; $('playBtn').disabled = false;
+    saveBlob(new Blob(chunks, { type }), ext);
+    if (ext === 'webm') $('status').append(' Saved as WebM because this device can’t record MP4. It plays on Android and YouTube.');
+    done();
   };
 
-  $('dlBtn').disabled = true; $('playBtn').disabled = true;
-  $('status').textContent = 'Recording in real time (this browser cannot do fast export)… keep this tab visible.';
+  $('status').textContent = 'Recording… keep the screen on and this tab open.';
   await document.fonts.ready;
   L = layout(); draw(0);
-  if (withMusic) await startMusic(+durEl.value);
+  if (music) {
+    const ok = await startMusic(+durEl.value);
+    if (!ok) { done(); return; }
+    if (A.state !== 'running') { try { await A.resume(); } catch (e) {} }
+  }
   rec.start(500);
   playing = true; startT = performance.now();
   loop(() => setTimeout(() => rec.stop(), 300));
 }
+$('recBtn').onclick = () => { if (hasMusic()) unlockAudio(); recordRealtime(); };
 
 Promise.all(['800 92px', '700 62px', '500 50px'].map(f => document.fonts.load(`${f} "${look.font}"`).catch(() => {})))
   .finally(() => { applyLook(false); settings(); });

@@ -5,18 +5,22 @@ Make 9:16 scrolling-text reels (rolling credits style) in the browser and downlo
 - Rich text editor: Title, Heading, Normal, Small, bold, italic, colours
 - Fonts, background colours, background image with darken slider
 - Built-in background music (original tracks in `music/`) or your own song
-- 1080p, 2K or 4K MP4 download
+- **Download**: makes the MP4 in seconds (1080p, 2K or 4K)
+- **Record**: plays the reel once and saves it, works on any device
 
 ## Files
 
 ```
 index.html          the app
 music/
-  lofi-study.mp3
-  soft-piano.mp3
-  calm-pad.mp3
-  upbeat-pop.mp3
+  lofi-study.mp3   lofi-study.aac
+  soft-piano.mp3   soft-piano.aac
+  calm-pad.mp3     calm-pad.aac
+  upbeat-pop.mp3   upbeat-pop.aac
 ```
+
+Keep both versions of each track. The `.mp3` plays in the preview; the `.aac` is copied
+straight into downloaded videos on phones, which can't encode audio themselves.
 
 The music tracks were made for this tool and are free to use in your reels.
 
@@ -32,7 +36,7 @@ The music tracks were made for this tool and are free to use in your reels.
 ## Notes
 
 - Use Chrome or Edge for the fastest download.
-- If you open `index.html` straight from your computer, the browser blocks the music files,
-  so the app generates the music live instead. On GitHub Pages the MP3 files are used.
+- Music only works when the page is served from a website (GitHub Pages, Vercel).
+  Opened straight from your computer, the browser blocks the music files.
 - If your browser can't make H.264/AAC video itself, the app downloads a one-time
   converter (about 32 MB) so the MP4 plays everywhere with sound.
