@@ -1,0 +1,2908 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Credits Reel Maker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=Poppins:wght@400;500;700;800&family=Montserrat:wght@400;500;700;800&family=Nunito:wght@400;500;700;800&family=Oswald:wght@400;500;700&family=Lora:wght@400;500;700&family=Playfair+Display:wght@400;500;700;800&family=Roboto+Slab:wght@400;500;700;800&family=Kalam:wght@400;700&display=swap">
+<style>
+  /* Layout: rich-text editor column + live 9:16 preview; toolbar sticks above the editor */
+  :root{
+    --bg:#0d0e10; --panel:#16181c; --line:#262a31; --fg:#eceef2; --muted:#8b919c; --accent:#f2c14e;
+    --ui:"Manrope",system-ui,-apple-system,"Segoe UI",sans-serif;
+    color-scheme:dark;
+  }
+  *{box-sizing:border-box}
+  [hidden]{display:none!important}
+  body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 var(--ui)}
+  .top{max-width:1180px;margin:0 auto;padding:24px 16px 0}
+  .top .sub{margin-bottom:0}
+  .wrap{max-width:1180px;margin:0 auto;padding:16px 16px 48px;display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:28px}
+  @media (max-width:860px){.wrap{grid-template-columns:1fr}}
+  h1.app{font-size:22px;font-weight:800;margin:0 0 4px;letter-spacing:-.01em}
+  .sub{color:var(--muted);margin:0 0 16px;font-size:14px}
+
+  .toolbar{position:sticky;top:0;z-index:2;display:flex;flex-wrap:wrap;gap:6px;padding:8px;background:var(--panel);border:1px solid var(--line);border-bottom:0;border-radius:10px 10px 0 0}
+  .toolbar .grp{display:flex;gap:4px;padding-right:8px;margin-right:2px;border-right:1px solid var(--line)}
+  .toolbar .grp:last-child{border-right:0}
+  .tb{min-width:0;flex:none;padding:7px 11px;border-radius:7px;border:1px solid transparent;background:transparent;color:var(--fg);font:600 13px var(--ui);cursor:pointer}
+  .tb:hover{background:#21252b}
+  .tb.on{background:#2b2f37;border-color:#3a3f48}
+  .tb.big{font-weight:800}
+  .tb.b{font-weight:800}
+  .tb.i{font-style:italic;font-family:Georgia,serif}
+  .sw{width:26px;height:26px;border-radius:50%;border:2px solid #3a3f48;cursor:pointer;padding:0;align-self:center}
+  .sw:hover{border-color:var(--fg)}
+
+  /* Editor looks like the reel: black, white, centered */
+  .editor{--txt:#fff;--txt-body:rgba(255,255,255,.86);--txt-dim:rgba(255,255,255,.7);--font:'Manrope';min-height:460px;max-height:70vh;overflow:auto;background:#000 center/cover no-repeat;color:var(--txt-body);border:1px solid var(--line);border-radius:0 0 10px 10px;padding:28px 24px;font-family:var(--font),sans-serif;text-align:center;outline:none}
+  .editor.left{text-align:left}
+  .editor:focus{border-color:#4a505b}
+  .editor h1{font-size:30px;font-weight:800;line-height:1.15;margin:22px 0 6px;color:var(--txt)}
+  .editor h2{font-size:22px;font-weight:700;line-height:1.25;margin:14px 0 4px;color:var(--txt)}
+  .editor p,.editor div{font-size:17px;font-weight:500;line-height:1.45;margin:4px 0}
+  .editor h4{font-size:14px;font-weight:500;line-height:1.4;margin:4px 0;color:var(--txt-dim)}
+  .editor b,.editor strong{font-weight:800}
+  .editor > :first-child{margin-top:0}
+
+  .controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-top:16px}
+  label{display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+  label span.val{color:var(--fg);font-variant-numeric:tabular-nums;text-transform:none;letter-spacing:0}
+  input[type=range]{accent-color:var(--accent)}
+  select,input[type=file]{background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:8px;font:14px var(--ui)}
+  .links{display:flex;gap:16px;margin-top:10px;font-size:13px}
+  .links button{background:none;border:0;color:var(--muted);font:600 13px var(--ui);cursor:pointer;padding:0;text-decoration:underline}
+  .links button:hover{color:var(--fg)}
+
+  .preview{position:sticky;top:20px;align-self:start;display:flex;flex-direction:column;gap:12px}
+  canvas{width:100%;aspect-ratio:9/16;background:#000;border-radius:14px;border:1px solid var(--line);display:block}
+  .row{display:flex;gap:10px;flex-wrap:wrap}
+  .btn{flex:1;min-width:120px;border:1px solid var(--line);background:var(--panel);color:var(--fg);padding:12px 14px;border-radius:10px;font:700 14px var(--ui);cursor:pointer}
+  .btn:hover{border-color:var(--muted)}
+  .btn.primary{background:var(--accent);color:#16130a;border-color:var(--accent)}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  button:focus-visible,select:focus,input:focus{outline:2px solid var(--accent);outline-offset:2px}
+  .bar{height:6px;background:var(--panel);border-radius:3px;overflow:hidden}
+  .bar i{display:block;height:100%;width:0;background:var(--accent)}
+  .status{font-size:13px;color:var(--muted);min-height:20px;font-variant-numeric:tabular-nums}
+  .status a{color:var(--accent);font-weight:700}
+  .music{margin-top:22px;padding:16px;background:var(--panel);border:1px solid var(--line);border-radius:12px}
+  .music-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px}
+  .lbl{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+  .btn.small{flex:none;min-width:0;padding:7px 14px;font-size:13px}
+  .tracks{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+  .track{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;padding:10px 12px;border-radius:9px;border:1px solid var(--line);background:var(--bg);color:var(--fg);font:14px var(--ui);cursor:pointer}
+  .track b{font-weight:700}
+  .track span{font-size:12px;color:var(--muted)}
+  .track:hover{border-color:var(--muted)}
+  .track.on{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+  .hint{margin:10px 0 0;font-size:12px;color:var(--muted)}
+  .actions{display:flex;flex-direction:column;gap:12px}
+  @media (max-width:860px){
+    .wrap{padding-bottom:150px}
+    .preview{position:static;order:-1}
+    canvas{width:auto;height:min(62vh,560px);max-width:100%;margin:0 auto}
+    .actions{position:fixed;left:0;right:0;bottom:0;z-index:5;gap:8px;padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));background:rgba(13,14,16,.94);backdrop-filter:blur(8px);border-top:1px solid var(--line)}
+    .actions .row{flex-wrap:nowrap}
+    .actions .btn{min-width:0;padding:12px 10px}
+    .actions .status{min-height:0;font-size:12px}
+    .editor{min-height:320px;max-height:none;padding:20px 14px}
+    .toolbar{top:0}
+    .tb{padding:8px 10px}
+    .sw{width:30px;height:30px}
+    .tracks{grid-template-columns:1fr 1fr}
+  }
+  .look{margin-top:22px;padding:16px;background:var(--panel);border:1px solid var(--line);border-radius:12px;display:flex;flex-direction:column;gap:16px}
+  .look .lbl{display:block;margin-bottom:8px}
+  .bgs{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .bgsw{width:34px;height:34px;border-radius:8px;border:2px solid var(--line);cursor:pointer;padding:0}
+  .bgsw.on{border-color:var(--accent);box-shadow:0 0 0 2px var(--bg) inset}
+  .custom{position:relative;width:34px;height:34px;border-radius:8px;border:2px dashed var(--muted);overflow:hidden;cursor:pointer;display:grid;place-items:center;font-weight:800;color:var(--muted)}
+  .custom input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+  .imgrow{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  .seg button{background:var(--bg);color:var(--fg);border:0;padding:8px 14px;font:600 13px var(--ui);cursor:pointer}
+  .seg button.on{background:var(--accent);color:#16130a}
+  #fontSel{width:100%;font-size:15px}
+</style>
+</head>
+<body>
+<header class="top">
+    <h1 class="app">Credits Reel Maker</h1>
+    <p class="sub">Type or paste your text. Click a line, then pick its size. Select words to make them bold, italic or coloured.</p>
+</header>
+<div class="wrap">
+  <section>
+
+    <div class="toolbar" id="toolbar">
+      <div class="grp">
+        <button class="tb big" data-block="h1" title="Big title">Title</button>
+        <button class="tb" data-block="h2" title="Heading">Heading</button>
+        <button class="tb" data-block="p" title="Normal text">Normal</button>
+        <button class="tb" data-block="h4" title="Small text">Small</button>
+      </div>
+      <div class="grp">
+        <button class="tb b" data-cmd="bold" title="Bold (Ctrl+B)">B</button>
+        <button class="tb i" data-cmd="italic" title="Italic (Ctrl+I)">I</button>
+      </div>
+      <div class="grp" aria-label="Text colour">
+        <button class="sw" data-color="#ffffff" style="background:#ffffff" title="White"></button>
+        <button class="sw" data-color="#111111" style="background:#111111" title="Black"></button>
+        <button class="sw" data-color="#f2c14e" style="background:#f2c14e" title="Yellow"></button>
+        <button class="sw" data-color="#ff5a5a" style="background:#ff5a5a" title="Red"></button>
+        <button class="sw" data-color="#5ad1ff" style="background:#5ad1ff" title="Blue"></button>
+        <button class="sw" data-color="#6be38a" style="background:#6be38a" title="Green"></button>
+      </div>
+      <div class="grp">
+        <button class="tb" data-cmd="removeFormat" title="Remove bold, italic and colour">Clear style</button>
+      </div>
+    </div>
+    <div class="editor" id="editor" contenteditable="true" spellcheck="true"></div>
+    <div class="links">
+      <button id="sampleBtn">Load Day 01 sample</button>
+      <button id="clearBtn">Start empty</button>
+    </div>
+
+    <div class="controls">
+      <label>Duration <span class="val" id="durVal">40 s</span>
+        <input id="dur" type="range" min="15" max="90" step="1" value="40"></label>
+      <label>Text size <span class="val" id="sizeVal">100%</span>
+        <input id="size" type="range" min="70" max="140" step="5" value="100"></label>
+      <label>Video quality
+        <select id="quality">
+          <option value="1080">1080p Full HD · recommended</option>
+          <option value="1440">1440p 2K</option>
+          <option value="2160">2160p 4K</option>
+        </select></label>
+      <label>Alignment
+        <select id="align"><option value="center">Center</option><option value="left">Left</option></select></label>
+    </div>
+
+    <div class="look">
+      <div>
+        <span class="lbl">Font style</span>
+        <select id="fontSel">
+          <option value="Manrope">Manrope · clean</option>
+          <option value="Poppins">Poppins · friendly</option>
+          <option value="Montserrat">Montserrat · bold &amp; modern</option>
+          <option value="Nunito">Nunito · soft &amp; rounded</option>
+          <option value="Oswald">Oswald · tall &amp; strong</option>
+          <option value="Lora">Lora · book style</option>
+          <option value="Playfair Display">Playfair Display · elegant</option>
+          <option value="Roboto Slab">Roboto Slab · classic</option>
+          <option value="Kalam">Kalam · handwritten</option>
+        </select>
+      </div>
+      <div>
+        <span class="lbl">Background colour</span>
+        <div class="bgs" id="bgs">
+          <button class="bgsw on" data-bg="#000000" style="background:#000000" title="Black"></button>
+          <button class="bgsw" data-bg="#14161c" style="background:#14161c" title="Charcoal"></button>
+          <button class="bgsw" data-bg="#0f1f3d" style="background:#0f1f3d" title="Navy"></button>
+          <button class="bgsw" data-bg="#2a1446" style="background:#2a1446" title="Purple"></button>
+          <button class="bgsw" data-bg="#0f3a2e" style="background:#0f3a2e" title="Forest"></button>
+          <button class="bgsw" data-bg="#4a1420" style="background:#4a1420" title="Maroon"></button>
+          <button class="bgsw" data-bg="#9b7bea" style="background:#9b7bea" title="Lavender"></button>
+          <button class="bgsw" data-bg="#f6efe2" style="background:#f6efe2" title="Cream"></button>
+          <button class="bgsw" data-bg="#ffffff" style="background:#ffffff" title="White"></button>
+          <label class="custom" title="Pick any colour">+<input type="color" id="bgCustom" value="#1d6fa5"></label>
+        </div>
+      </div>
+      <div>
+        <span class="lbl">Background image</span>
+        <div class="imgrow">
+          <button class="btn small" id="imgBtn">Upload image</button>
+          <button class="btn small" id="imgRemove" hidden>Remove image</button>
+          <input type="file" id="imgFile" accept="image/*" hidden>
+        </div>
+        <div class="controls" id="dimWrap" style="margin-top:10px" hidden>
+          <label>Darken image <span class="val" id="dimVal">45%</span>
+            <input id="dim" type="range" min="0" max="85" step="5" value="45"></label>
+        </div>
+      </div>
+      <div>
+        <span class="lbl">Main text colour</span>
+        <div class="seg" id="tone">
+          <button data-tone="light" class="on">Light text</button>
+          <button data-tone="dark">Dark text</button>
+        </div>
+        <p class="hint">Use dark text on light backgrounds like cream or white.</p>
+      </div>
+    </div>
+
+    <div class="music">
+      <div class="music-head">
+        <span class="lbl">Background music</span>
+        <button class="btn small" id="listenBtn">▶ Listen</button>
+      </div>
+      <div class="tracks" id="tracks">
+        <button class="track" data-track="none"><b>No music</b><span>Silent</span></button>
+        <button class="track" data-track="piano"><b>Soft Piano</b><span>Gentle, focused</span></button>
+        <button class="track on" data-track="lofi"><b>Lo-fi Study</b><span>Chill beat</span></button>
+        <button class="track" data-track="calm"><b>Calm Pad</b><span>Slow, airy</span></button>
+        <button class="track" data-track="upbeat"><b>Upbeat Pop</b><span>Energetic</span></button>
+        <button class="track" data-track="upload"><b>My own song</b><span>Upload a file</span></button>
+      </div>
+      <input id="music" type="file" accept="audio/*" hidden>
+      <div class="controls" style="margin-top:12px">
+        <label>Music volume <span class="val" id="volVal">60%</span>
+          <input id="vol" type="range" min="0" max="100" step="5" value="60"></label>
+      </div>
+      <p class="hint">Built-in tracks are original music made for this tool, so they're safe to post. If you upload your own song, check you have the rights to use it.</p>
+    </div>
+  </section>
+
+  <aside class="preview">
+    <canvas id="cv" width="1080" height="1920"></canvas>
+    <div class="actions">
+      <div class="bar"><i id="prog"></i></div>
+      <div class="row">
+        <button class="btn" id="playBtn">Play preview</button>
+        <button class="btn primary" id="dlBtn">⬇ Download video</button>
+      </div>
+      <div class="status" id="status">1080 × 1920 MP4 · 30 fps · ready in a few seconds.</div>
+    </div>
+  </aside>
+</div>
+
+<script>/* mp4-muxer 5.1.3 (MIT) */
+"use strict";
+var Mp4Muxer = (() => {
+  var __defProp = Object.defineProperty;
+  var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+  var __getOwnPropNames = Object.getOwnPropertyNames;
+  var __hasOwnProp = Object.prototype.hasOwnProperty;
+  var __export = (target, all) => {
+    for (var name in all)
+      __defProp(target, name, { get: all[name], enumerable: true });
+  };
+  var __copyProps = (to, from, except, desc) => {
+    if (from && typeof from === "object" || typeof from === "function") {
+      for (let key of __getOwnPropNames(from))
+        if (!__hasOwnProp.call(to, key) && key !== except)
+          __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+    }
+    return to;
+  };
+  var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+  var __accessCheck = (obj, member, msg) => {
+    if (!member.has(obj))
+      throw TypeError("Cannot " + msg);
+  };
+  var __privateGet = (obj, member, getter) => {
+    __accessCheck(obj, member, "read from private field");
+    return getter ? getter.call(obj) : member.get(obj);
+  };
+  var __privateAdd = (obj, member, value) => {
+    if (member.has(obj))
+      throw TypeError("Cannot add the same private member more than once");
+    member instanceof WeakSet ? member.add(obj) : member.set(obj, value);
+  };
+  var __privateSet = (obj, member, value, setter) => {
+    __accessCheck(obj, member, "write to private field");
+    setter ? setter.call(obj, value) : member.set(obj, value);
+    return value;
+  };
+  var __privateWrapper = (obj, member, setter, getter) => ({
+    set _(value) {
+      __privateSet(obj, member, value, setter);
+    },
+    get _() {
+      return __privateGet(obj, member, getter);
+    }
+  });
+  var __privateMethod = (obj, member, method) => {
+    __accessCheck(obj, member, "access private method");
+    return method;
+  };
+
+  // src/index.ts
+  var src_exports = {};
+  __export(src_exports, {
+    ArrayBufferTarget: () => ArrayBufferTarget,
+    FileSystemWritableFileStreamTarget: () => FileSystemWritableFileStreamTarget,
+    Muxer: () => Muxer,
+    StreamTarget: () => StreamTarget
+  });
+
+  // src/misc.ts
+  var bytes = new Uint8Array(8);
+  var view = new DataView(bytes.buffer);
+  var u8 = (value) => {
+    return [(value % 256 + 256) % 256];
+  };
+  var u16 = (value) => {
+    view.setUint16(0, value, false);
+    return [bytes[0], bytes[1]];
+  };
+  var i16 = (value) => {
+    view.setInt16(0, value, false);
+    return [bytes[0], bytes[1]];
+  };
+  var u24 = (value) => {
+    view.setUint32(0, value, false);
+    return [bytes[1], bytes[2], bytes[3]];
+  };
+  var u32 = (value) => {
+    view.setUint32(0, value, false);
+    return [bytes[0], bytes[1], bytes[2], bytes[3]];
+  };
+  var i32 = (value) => {
+    view.setInt32(0, value, false);
+    return [bytes[0], bytes[1], bytes[2], bytes[3]];
+  };
+  var u64 = (value) => {
+    view.setUint32(0, Math.floor(value / 2 ** 32), false);
+    view.setUint32(4, value, false);
+    return [bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7]];
+  };
+  var fixed_8_8 = (value) => {
+    view.setInt16(0, 2 ** 8 * value, false);
+    return [bytes[0], bytes[1]];
+  };
+  var fixed_16_16 = (value) => {
+    view.setInt32(0, 2 ** 16 * value, false);
+    return [bytes[0], bytes[1], bytes[2], bytes[3]];
+  };
+  var fixed_2_30 = (value) => {
+    view.setInt32(0, 2 ** 30 * value, false);
+    return [bytes[0], bytes[1], bytes[2], bytes[3]];
+  };
+  var ascii = (text, nullTerminated = false) => {
+    let bytes2 = Array(text.length).fill(null).map((_, i) => text.charCodeAt(i));
+    if (nullTerminated)
+      bytes2.push(0);
+    return bytes2;
+  };
+  var last = (arr) => {
+    return arr && arr[arr.length - 1];
+  };
+  var lastPresentedSample = (samples) => {
+    let result = void 0;
+    for (let sample of samples) {
+      if (!result || sample.presentationTimestamp > result.presentationTimestamp) {
+        result = sample;
+      }
+    }
+    return result;
+  };
+  var intoTimescale = (timeInSeconds, timescale, round = true) => {
+    let value = timeInSeconds * timescale;
+    return round ? Math.round(value) : value;
+  };
+  var rotationMatrix = (rotationInDegrees) => {
+    let theta = rotationInDegrees * (Math.PI / 180);
+    let cosTheta = Math.cos(theta);
+    let sinTheta = Math.sin(theta);
+    return [
+      cosTheta,
+      sinTheta,
+      0,
+      -sinTheta,
+      cosTheta,
+      0,
+      0,
+      0,
+      1
+    ];
+  };
+  var IDENTITY_MATRIX = rotationMatrix(0);
+  var matrixToBytes = (matrix) => {
+    return [
+      fixed_16_16(matrix[0]),
+      fixed_16_16(matrix[1]),
+      fixed_2_30(matrix[2]),
+      fixed_16_16(matrix[3]),
+      fixed_16_16(matrix[4]),
+      fixed_2_30(matrix[5]),
+      fixed_16_16(matrix[6]),
+      fixed_16_16(matrix[7]),
+      fixed_2_30(matrix[8])
+    ];
+  };
+  var deepClone = (x) => {
+    if (!x)
+      return x;
+    if (typeof x !== "object")
+      return x;
+    if (Array.isArray(x))
+      return x.map(deepClone);
+    return Object.fromEntries(Object.entries(x).map(([key, value]) => [key, deepClone(value)]));
+  };
+  var isU32 = (value) => {
+    return value >= 0 && value < 2 ** 32;
+  };
+
+  // src/box.ts
+  var box = (type, contents, children) => ({
+    type,
+    contents: contents && new Uint8Array(contents.flat(10)),
+    children
+  });
+  var fullBox = (type, version, flags, contents, children) => box(
+    type,
+    [u8(version), u24(flags), contents ?? []],
+    children
+  );
+  var ftyp = (details) => {
+    let minorVersion = 512;
+    if (details.fragmented)
+      return box("ftyp", [
+        ascii("iso5"),
+        // Major brand
+        u32(minorVersion),
+        // Minor version
+        // Compatible brands
+        ascii("iso5"),
+        ascii("iso6"),
+        ascii("mp41")
+      ]);
+    return box("ftyp", [
+      ascii("isom"),
+      // Major brand
+      u32(minorVersion),
+      // Minor version
+      // Compatible brands
+      ascii("isom"),
+      details.holdsAvc ? ascii("avc1") : [],
+      ascii("mp41")
+    ]);
+  };
+  var mdat = (reserveLargeSize) => ({ type: "mdat", largeSize: reserveLargeSize });
+  var free = (size) => ({ type: "free", size });
+  var moov = (tracks, creationTime, fragmented = false) => box("moov", null, [
+    mvhd(creationTime, tracks),
+    ...tracks.map((x) => trak(x, creationTime)),
+    fragmented ? mvex(tracks) : null
+  ]);
+  var mvhd = (creationTime, tracks) => {
+    let duration = intoTimescale(Math.max(
+      0,
+      ...tracks.filter((x) => x.samples.length > 0).map((x) => {
+        const lastSample = lastPresentedSample(x.samples);
+        return lastSample.presentationTimestamp + lastSample.duration;
+      })
+    ), GLOBAL_TIMESCALE);
+    let nextTrackId = Math.max(...tracks.map((x) => x.id)) + 1;
+    let needsU64 = !isU32(creationTime) || !isU32(duration);
+    let u32OrU64 = needsU64 ? u64 : u32;
+    return fullBox("mvhd", +needsU64, 0, [
+      u32OrU64(creationTime),
+      // Creation time
+      u32OrU64(creationTime),
+      // Modification time
+      u32(GLOBAL_TIMESCALE),
+      // Timescale
+      u32OrU64(duration),
+      // Duration
+      fixed_16_16(1),
+      // Preferred rate
+      fixed_8_8(1),
+      // Preferred volume
+      Array(10).fill(0),
+      // Reserved
+      matrixToBytes(IDENTITY_MATRIX),
+      // Matrix
+      Array(24).fill(0),
+      // Pre-defined
+      u32(nextTrackId)
+      // Next track ID
+    ]);
+  };
+  var trak = (track, creationTime) => box("trak", null, [
+    tkhd(track, creationTime),
+    mdia(track, creationTime)
+  ]);
+  var tkhd = (track, creationTime) => {
+    let lastSample = lastPresentedSample(track.samples);
+    let durationInGlobalTimescale = intoTimescale(
+      lastSample ? lastSample.presentationTimestamp + lastSample.duration : 0,
+      GLOBAL_TIMESCALE
+    );
+    let needsU64 = !isU32(creationTime) || !isU32(durationInGlobalTimescale);
+    let u32OrU64 = needsU64 ? u64 : u32;
+    let matrix;
+    if (track.info.type === "video") {
+      matrix = typeof track.info.rotation === "number" ? rotationMatrix(track.info.rotation) : track.info.rotation;
+    } else {
+      matrix = IDENTITY_MATRIX;
+    }
+    return fullBox("tkhd", +needsU64, 3, [
+      u32OrU64(creationTime),
+      // Creation time
+      u32OrU64(creationTime),
+      // Modification time
+      u32(track.id),
+      // Track ID
+      u32(0),
+      // Reserved
+      u32OrU64(durationInGlobalTimescale),
+      // Duration
+      Array(8).fill(0),
+      // Reserved
+      u16(0),
+      // Layer
+      u16(0),
+      // Alternate group
+      fixed_8_8(track.info.type === "audio" ? 1 : 0),
+      // Volume
+      u16(0),
+      // Reserved
+      matrixToBytes(matrix),
+      // Matrix
+      fixed_16_16(track.info.type === "video" ? track.info.width : 0),
+      // Track width
+      fixed_16_16(track.info.type === "video" ? track.info.height : 0)
+      // Track height
+    ]);
+  };
+  var mdia = (track, creationTime) => box("mdia", null, [
+    mdhd(track, creationTime),
+    hdlr(track.info.type === "video" ? "vide" : "soun"),
+    minf(track)
+  ]);
+  var mdhd = (track, creationTime) => {
+    let lastSample = lastPresentedSample(track.samples);
+    let localDuration = intoTimescale(
+      lastSample ? lastSample.presentationTimestamp + lastSample.duration : 0,
+      track.timescale
+    );
+    let needsU64 = !isU32(creationTime) || !isU32(localDuration);
+    let u32OrU64 = needsU64 ? u64 : u32;
+    return fullBox("mdhd", +needsU64, 0, [
+      u32OrU64(creationTime),
+      // Creation time
+      u32OrU64(creationTime),
+      // Modification time
+      u32(track.timescale),
+      // Timescale
+      u32OrU64(localDuration),
+      // Duration
+      u16(21956),
+      // Language ("und", undetermined)
+      u16(0)
+      // Quality
+    ]);
+  };
+  var hdlr = (componentSubtype) => fullBox("hdlr", 0, 0, [
+    ascii("mhlr"),
+    // Component type
+    ascii(componentSubtype),
+    // Component subtype
+    u32(0),
+    // Component manufacturer
+    u32(0),
+    // Component flags
+    u32(0),
+    // Component flags mask
+    ascii("mp4-muxer-hdlr", true)
+    // Component name
+  ]);
+  var minf = (track) => box("minf", null, [
+    track.info.type === "video" ? vmhd() : smhd(),
+    dinf(),
+    stbl(track)
+  ]);
+  var vmhd = () => fullBox("vmhd", 0, 1, [
+    u16(0),
+    // Graphics mode
+    u16(0),
+    // Opcolor R
+    u16(0),
+    // Opcolor G
+    u16(0)
+    // Opcolor B
+  ]);
+  var smhd = () => fullBox("smhd", 0, 0, [
+    u16(0),
+    // Balance
+    u16(0)
+    // Reserved
+  ]);
+  var dinf = () => box("dinf", null, [
+    dref()
+  ]);
+  var dref = () => fullBox("dref", 0, 0, [
+    u32(1)
+    // Entry count
+  ], [
+    url()
+  ]);
+  var url = () => fullBox("url ", 0, 1);
+  var stbl = (track) => {
+    const needsCtts = track.compositionTimeOffsetTable.length > 1 || track.compositionTimeOffsetTable.some((x) => x.sampleCompositionTimeOffset !== 0);
+    return box("stbl", null, [
+      stsd(track),
+      stts(track),
+      stss(track),
+      stsc(track),
+      stsz(track),
+      stco(track),
+      needsCtts ? ctts(track) : null
+    ]);
+  };
+  var stsd = (track) => fullBox("stsd", 0, 0, [
+    u32(1)
+    // Entry count
+  ], [
+    track.info.type === "video" ? videoSampleDescription(
+      VIDEO_CODEC_TO_BOX_NAME[track.info.codec],
+      track
+    ) : soundSampleDescription(
+      AUDIO_CODEC_TO_BOX_NAME[track.info.codec],
+      track
+    )
+  ]);
+  var videoSampleDescription = (compressionType, track) => box(compressionType, [
+    Array(6).fill(0),
+    // Reserved
+    u16(1),
+    // Data reference index
+    u16(0),
+    // Pre-defined
+    u16(0),
+    // Reserved
+    Array(12).fill(0),
+    // Pre-defined
+    u16(track.info.width),
+    // Width
+    u16(track.info.height),
+    // Height
+    u32(4718592),
+    // Horizontal resolution
+    u32(4718592),
+    // Vertical resolution
+    u32(0),
+    // Reserved
+    u16(1),
+    // Frame count
+    Array(32).fill(0),
+    // Compressor name
+    u16(24),
+    // Depth
+    i16(65535)
+    // Pre-defined
+  ], [
+    VIDEO_CODEC_TO_CONFIGURATION_BOX[track.info.codec](track)
+  ]);
+  var avcC = (track) => track.info.decoderConfig && box("avcC", [
+    // For AVC, description is an AVCDecoderConfigurationRecord, so nothing else to do here
+    ...new Uint8Array(track.info.decoderConfig.description)
+  ]);
+  var hvcC = (track) => track.info.decoderConfig && box("hvcC", [
+    // For HEVC, description is a HEVCDecoderConfigurationRecord, so nothing else to do here
+    ...new Uint8Array(track.info.decoderConfig.description)
+  ]);
+  var vpcC = (track) => {
+    if (!track.info.decoderConfig) {
+      return null;
+    }
+    let decoderConfig = track.info.decoderConfig;
+    if (!decoderConfig.colorSpace) {
+      throw new Error(`'colorSpace' is required in the decoder config for VP9.`);
+    }
+    let parts = decoderConfig.codec.split(".");
+    let profile = Number(parts[1]);
+    let level = Number(parts[2]);
+    let bitDepth = Number(parts[3]);
+    let chromaSubsampling = 0;
+    let thirdByte = (bitDepth << 4) + (chromaSubsampling << 1) + Number(decoderConfig.colorSpace.fullRange);
+    let colourPrimaries = 2;
+    let transferCharacteristics = 2;
+    let matrixCoefficients = 2;
+    return fullBox("vpcC", 1, 0, [
+      u8(profile),
+      // Profile
+      u8(level),
+      // Level
+      u8(thirdByte),
+      // Bit depth, chroma subsampling, full range
+      u8(colourPrimaries),
+      // Colour primaries
+      u8(transferCharacteristics),
+      // Transfer characteristics
+      u8(matrixCoefficients),
+      // Matrix coefficients
+      u16(0)
+      // Codec initialization data size
+    ]);
+  };
+  var av1C = () => {
+    let marker = 1;
+    let version = 1;
+    let firstByte = (marker << 7) + version;
+    return box("av1C", [
+      firstByte,
+      0,
+      0,
+      0
+    ]);
+  };
+  var soundSampleDescription = (compressionType, track) => box(compressionType, [
+    Array(6).fill(0),
+    // Reserved
+    u16(1),
+    // Data reference index
+    u16(0),
+    // Version
+    u16(0),
+    // Revision level
+    u32(0),
+    // Vendor
+    u16(track.info.numberOfChannels),
+    // Number of channels
+    u16(16),
+    // Sample size (bits)
+    u16(0),
+    // Compression ID
+    u16(0),
+    // Packet size
+    fixed_16_16(track.info.sampleRate)
+    // Sample rate
+  ], [
+    AUDIO_CODEC_TO_CONFIGURATION_BOX[track.info.codec](track)
+  ]);
+  var esds = (track) => {
+    let description = new Uint8Array(track.info.decoderConfig.description);
+    return fullBox("esds", 0, 0, [
+      // https://stackoverflow.com/a/54803118
+      u32(58753152),
+      // TAG(3) = Object Descriptor ([2])
+      u8(32 + description.byteLength),
+      // length of this OD (which includes the next 2 tags)
+      u16(1),
+      // ES_ID = 1
+      u8(0),
+      // flags etc = 0
+      u32(75530368),
+      // TAG(4) = ES Descriptor ([2]) embedded in above OD
+      u8(18 + description.byteLength),
+      // length of this ESD
+      u8(64),
+      // MPEG-4 Audio
+      u8(21),
+      // stream type(6bits)=5 audio, flags(2bits)=1
+      u24(0),
+      // 24bit buffer size
+      u32(130071),
+      // max bitrate
+      u32(130071),
+      // avg bitrate
+      u32(92307584),
+      // TAG(5) = ASC ([2],[3]) embedded in above OD
+      u8(description.byteLength),
+      // length
+      ...description,
+      u32(109084800),
+      // TAG(6)
+      u8(1),
+      // length
+      u8(2)
+      // data
+    ]);
+  };
+  var dOps = (track) => {
+    let preskip = 3840;
+    let gain = 0;
+    const description = track.info.decoderConfig?.description;
+    if (description) {
+      if (description.byteLength < 18) {
+        throw new TypeError("Invalid decoder description provided for Opus; must be at least 18 bytes long.");
+      }
+      const view2 = ArrayBuffer.isView(description) ? new DataView(description.buffer, description.byteOffset, description.byteLength) : new DataView(description);
+      preskip = view2.getUint16(10, true);
+      gain = view2.getInt16(14, true);
+    }
+    return box("dOps", [
+      u8(0),
+      // Version
+      u8(track.info.numberOfChannels),
+      // OutputChannelCount
+      u16(preskip),
+      u32(track.info.sampleRate),
+      // InputSampleRate
+      fixed_8_8(gain),
+      // OutputGain
+      u8(0)
+      // ChannelMappingFamily
+    ]);
+  };
+  var stts = (track) => {
+    return fullBox("stts", 0, 0, [
+      u32(track.timeToSampleTable.length),
+      // Number of entries
+      track.timeToSampleTable.map((x) => [
+        // Time-to-sample table
+        u32(x.sampleCount),
+        // Sample count
+        u32(x.sampleDelta)
+        // Sample duration
+      ])
+    ]);
+  };
+  var stss = (track) => {
+    if (track.samples.every((x) => x.type === "key"))
+      return null;
+    let keySamples = [...track.samples.entries()].filter(([, sample]) => sample.type === "key");
+    return fullBox("stss", 0, 0, [
+      u32(keySamples.length),
+      // Number of entries
+      keySamples.map(([index]) => u32(index + 1))
+      // Sync sample table
+    ]);
+  };
+  var stsc = (track) => {
+    return fullBox("stsc", 0, 0, [
+      u32(track.compactlyCodedChunkTable.length),
+      // Number of entries
+      track.compactlyCodedChunkTable.map((x) => [
+        // Sample-to-chunk table
+        u32(x.firstChunk),
+        // First chunk
+        u32(x.samplesPerChunk),
+        // Samples per chunk
+        u32(1)
+        // Sample description index
+      ])
+    ]);
+  };
+  var stsz = (track) => fullBox("stsz", 0, 0, [
+    u32(0),
+    // Sample size (0 means non-constant size)
+    u32(track.samples.length),
+    // Number of entries
+    track.samples.map((x) => u32(x.size))
+    // Sample size table
+  ]);
+  var stco = (track) => {
+    if (track.finalizedChunks.length > 0 && last(track.finalizedChunks).offset >= 2 ** 32) {
+      return fullBox("co64", 0, 0, [
+        u32(track.finalizedChunks.length),
+        // Number of entries
+        track.finalizedChunks.map((x) => u64(x.offset))
+        // Chunk offset table
+      ]);
+    }
+    return fullBox("stco", 0, 0, [
+      u32(track.finalizedChunks.length),
+      // Number of entries
+      track.finalizedChunks.map((x) => u32(x.offset))
+      // Chunk offset table
+    ]);
+  };
+  var ctts = (track) => {
+    return fullBox("ctts", 0, 0, [
+      u32(track.compositionTimeOffsetTable.length),
+      // Number of entries
+      track.compositionTimeOffsetTable.map((x) => [
+        // Time-to-sample table
+        u32(x.sampleCount),
+        // Sample count
+        u32(x.sampleCompositionTimeOffset)
+        // Sample offset
+      ])
+    ]);
+  };
+  var mvex = (tracks) => {
+    return box("mvex", null, tracks.map(trex));
+  };
+  var trex = (track) => {
+    return fullBox("trex", 0, 0, [
+      u32(track.id),
+      // Track ID
+      u32(1),
+      // Default sample description index
+      u32(0),
+      // Default sample duration
+      u32(0),
+      // Default sample size
+      u32(0)
+      // Default sample flags
+    ]);
+  };
+  var moof = (sequenceNumber, tracks) => {
+    return box("moof", null, [
+      mfhd(sequenceNumber),
+      ...tracks.map(traf)
+    ]);
+  };
+  var mfhd = (sequenceNumber) => {
+    return fullBox("mfhd", 0, 0, [
+      u32(sequenceNumber)
+      // Sequence number
+    ]);
+  };
+  var fragmentSampleFlags = (sample) => {
+    let byte1 = 0;
+    let byte2 = 0;
+    let byte3 = 0;
+    let byte4 = 0;
+    let sampleIsDifferenceSample = sample.type === "delta";
+    byte2 |= +sampleIsDifferenceSample;
+    if (sampleIsDifferenceSample) {
+      byte1 |= 1;
+    } else {
+      byte1 |= 2;
+    }
+    return byte1 << 24 | byte2 << 16 | byte3 << 8 | byte4;
+  };
+  var traf = (track) => {
+    return box("traf", null, [
+      tfhd(track),
+      tfdt(track),
+      trun(track)
+    ]);
+  };
+  var tfhd = (track) => {
+    let tfFlags = 0;
+    tfFlags |= 8;
+    tfFlags |= 16;
+    tfFlags |= 32;
+    tfFlags |= 131072;
+    let referenceSample = track.currentChunk.samples[1] ?? track.currentChunk.samples[0];
+    let referenceSampleInfo = {
+      duration: referenceSample.timescaleUnitsToNextSample,
+      size: referenceSample.size,
+      flags: fragmentSampleFlags(referenceSample)
+    };
+    return fullBox("tfhd", 0, tfFlags, [
+      u32(track.id),
+      // Track ID
+      u32(referenceSampleInfo.duration),
+      // Default sample duration
+      u32(referenceSampleInfo.size),
+      // Default sample size
+      u32(referenceSampleInfo.flags)
+      // Default sample flags
+    ]);
+  };
+  var tfdt = (track) => {
+    return fullBox("tfdt", 1, 0, [
+      u64(intoTimescale(track.currentChunk.startTimestamp, track.timescale))
+      // Base Media Decode Time
+    ]);
+  };
+  var trun = (track) => {
+    let allSampleDurations = track.currentChunk.samples.map((x) => x.timescaleUnitsToNextSample);
+    let allSampleSizes = track.currentChunk.samples.map((x) => x.size);
+    let allSampleFlags = track.currentChunk.samples.map(fragmentSampleFlags);
+    let allSampleCompositionTimeOffsets = track.currentChunk.samples.map((x) => intoTimescale(x.presentationTimestamp - x.decodeTimestamp, track.timescale));
+    let uniqueSampleDurations = new Set(allSampleDurations);
+    let uniqueSampleSizes = new Set(allSampleSizes);
+    let uniqueSampleFlags = new Set(allSampleFlags);
+    let uniqueSampleCompositionTimeOffsets = new Set(allSampleCompositionTimeOffsets);
+    let firstSampleFlagsPresent = uniqueSampleFlags.size === 2 && allSampleFlags[0] !== allSampleFlags[1];
+    let sampleDurationPresent = uniqueSampleDurations.size > 1;
+    let sampleSizePresent = uniqueSampleSizes.size > 1;
+    let sampleFlagsPresent = !firstSampleFlagsPresent && uniqueSampleFlags.size > 1;
+    let sampleCompositionTimeOffsetsPresent = uniqueSampleCompositionTimeOffsets.size > 1 || [...uniqueSampleCompositionTimeOffsets].some((x) => x !== 0);
+    let flags = 0;
+    flags |= 1;
+    flags |= 4 * +firstSampleFlagsPresent;
+    flags |= 256 * +sampleDurationPresent;
+    flags |= 512 * +sampleSizePresent;
+    flags |= 1024 * +sampleFlagsPresent;
+    flags |= 2048 * +sampleCompositionTimeOffsetsPresent;
+    return fullBox("trun", 1, flags, [
+      u32(track.currentChunk.samples.length),
+      // Sample count
+      u32(track.currentChunk.offset - track.currentChunk.moofOffset || 0),
+      // Data offset
+      firstSampleFlagsPresent ? u32(allSampleFlags[0]) : [],
+      track.currentChunk.samples.map((_, i) => [
+        sampleDurationPresent ? u32(allSampleDurations[i]) : [],
+        // Sample duration
+        sampleSizePresent ? u32(allSampleSizes[i]) : [],
+        // Sample size
+        sampleFlagsPresent ? u32(allSampleFlags[i]) : [],
+        // Sample flags
+        // Sample composition time offsets
+        sampleCompositionTimeOffsetsPresent ? i32(allSampleCompositionTimeOffsets[i]) : []
+      ])
+    ]);
+  };
+  var mfra = (tracks) => {
+    return box("mfra", null, [
+      ...tracks.map(tfra),
+      mfro()
+    ]);
+  };
+  var tfra = (track, trackIndex) => {
+    let version = 1;
+    return fullBox("tfra", version, 0, [
+      u32(track.id),
+      // Track ID
+      u32(63),
+      // This specifies that traf number, trun number and sample number are 32-bit ints
+      u32(track.finalizedChunks.length),
+      // Number of entries
+      track.finalizedChunks.map((chunk) => [
+        u64(intoTimescale(chunk.startTimestamp, track.timescale)),
+        // Time
+        u64(chunk.moofOffset),
+        // moof offset
+        u32(trackIndex + 1),
+        // traf number
+        u32(1),
+        // trun number
+        u32(1)
+        // Sample number
+      ])
+    ]);
+  };
+  var mfro = () => {
+    return fullBox("mfro", 0, 0, [
+      // This value needs to be overwritten manually from the outside, where the actual size of the enclosing mfra box
+      // is known
+      u32(0)
+      // Size
+    ]);
+  };
+  var VIDEO_CODEC_TO_BOX_NAME = {
+    "avc": "avc1",
+    "hevc": "hvc1",
+    "vp9": "vp09",
+    "av1": "av01"
+  };
+  var VIDEO_CODEC_TO_CONFIGURATION_BOX = {
+    "avc": avcC,
+    "hevc": hvcC,
+    "vp9": vpcC,
+    "av1": av1C
+  };
+  var AUDIO_CODEC_TO_BOX_NAME = {
+    "aac": "mp4a",
+    "opus": "Opus"
+  };
+  var AUDIO_CODEC_TO_CONFIGURATION_BOX = {
+    "aac": esds,
+    "opus": dOps
+  };
+
+  // src/target.ts
+  var isTarget = Symbol("isTarget");
+  var Target = class {
+  };
+  isTarget;
+  var ArrayBufferTarget = class extends Target {
+    constructor() {
+      super(...arguments);
+      this.buffer = null;
+    }
+  };
+  var StreamTarget = class extends Target {
+    constructor(options) {
+      super();
+      this.options = options;
+      if (typeof options !== "object") {
+        throw new TypeError("StreamTarget requires an options object to be passed to its constructor.");
+      }
+      if (options.onData) {
+        if (typeof options.onData !== "function") {
+          throw new TypeError("options.onData, when provided, must be a function.");
+        }
+        if (options.onData.length < 2) {
+          throw new TypeError(
+            "options.onData, when provided, must be a function that takes in at least two arguments (data and position). Ignoring the position argument, which specifies the byte offset at which the data is to be written, can lead to broken outputs."
+          );
+        }
+      }
+      if (options.chunked !== void 0 && typeof options.chunked !== "boolean") {
+        throw new TypeError("options.chunked, when provided, must be a boolean.");
+      }
+      if (options.chunkSize !== void 0 && (!Number.isInteger(options.chunkSize) || options.chunkSize <= 0)) {
+        throw new TypeError("options.chunkSize, when provided, must be a positive integer.");
+      }
+    }
+  };
+  var FileSystemWritableFileStreamTarget = class extends Target {
+    constructor(stream, options) {
+      super();
+      this.stream = stream;
+      this.options = options;
+      if (!(stream instanceof FileSystemWritableFileStream)) {
+        throw new TypeError("FileSystemWritableFileStreamTarget requires a FileSystemWritableFileStream instance.");
+      }
+      if (options !== void 0 && typeof options !== "object") {
+        throw new TypeError("FileSystemWritableFileStreamTarget's options, when provided, must be an object.");
+      }
+      if (options) {
+        if (options.chunkSize !== void 0 && (!Number.isInteger(options.chunkSize) || options.chunkSize <= 0)) {
+          throw new TypeError("options.chunkSize, when provided, must be a positive integer");
+        }
+      }
+    }
+  };
+
+  // src/writer.ts
+  var _helper, _helperView;
+  var Writer = class {
+    constructor() {
+      this.pos = 0;
+      __privateAdd(this, _helper, new Uint8Array(8));
+      __privateAdd(this, _helperView, new DataView(__privateGet(this, _helper).buffer));
+      /**
+       * Stores the position from the start of the file to where boxes elements have been written. This is used to
+       * rewrite/edit elements that were already added before, and to measure sizes of things.
+       */
+      this.offsets = /* @__PURE__ */ new WeakMap();
+    }
+    /** Sets the current position for future writes to a new one. */
+    seek(newPos) {
+      this.pos = newPos;
+    }
+    writeU32(value) {
+      __privateGet(this, _helperView).setUint32(0, value, false);
+      this.write(__privateGet(this, _helper).subarray(0, 4));
+    }
+    writeU64(value) {
+      __privateGet(this, _helperView).setUint32(0, Math.floor(value / 2 ** 32), false);
+      __privateGet(this, _helperView).setUint32(4, value, false);
+      this.write(__privateGet(this, _helper).subarray(0, 8));
+    }
+    writeAscii(text) {
+      for (let i = 0; i < text.length; i++) {
+        __privateGet(this, _helperView).setUint8(i % 8, text.charCodeAt(i));
+        if (i % 8 === 7)
+          this.write(__privateGet(this, _helper));
+      }
+      if (text.length % 8 !== 0) {
+        this.write(__privateGet(this, _helper).subarray(0, text.length % 8));
+      }
+    }
+    writeBox(box2) {
+      this.offsets.set(box2, this.pos);
+      if (box2.contents && !box2.children) {
+        this.writeBoxHeader(box2, box2.size ?? box2.contents.byteLength + 8);
+        this.write(box2.contents);
+      } else {
+        let startPos = this.pos;
+        this.writeBoxHeader(box2, 0);
+        if (box2.contents)
+          this.write(box2.contents);
+        if (box2.children) {
+          for (let child of box2.children)
+            if (child)
+              this.writeBox(child);
+        }
+        let endPos = this.pos;
+        let size = box2.size ?? endPos - startPos;
+        this.seek(startPos);
+        this.writeBoxHeader(box2, size);
+        this.seek(endPos);
+      }
+    }
+    writeBoxHeader(box2, size) {
+      this.writeU32(box2.largeSize ? 1 : size);
+      this.writeAscii(box2.type);
+      if (box2.largeSize)
+        this.writeU64(size);
+    }
+    measureBoxHeader(box2) {
+      return 8 + (box2.largeSize ? 8 : 0);
+    }
+    patchBox(box2) {
+      let endPos = this.pos;
+      this.seek(this.offsets.get(box2));
+      this.writeBox(box2);
+      this.seek(endPos);
+    }
+    measureBox(box2) {
+      if (box2.contents && !box2.children) {
+        let headerSize = this.measureBoxHeader(box2);
+        return headerSize + box2.contents.byteLength;
+      } else {
+        let result = this.measureBoxHeader(box2);
+        if (box2.contents)
+          result += box2.contents.byteLength;
+        if (box2.children) {
+          for (let child of box2.children)
+            if (child)
+              result += this.measureBox(child);
+        }
+        return result;
+      }
+    }
+  };
+  _helper = new WeakMap();
+  _helperView = new WeakMap();
+  var _target, _buffer, _bytes, _maxPos, _ensureSize, ensureSize_fn;
+  var ArrayBufferTargetWriter = class extends Writer {
+    constructor(target) {
+      super();
+      __privateAdd(this, _ensureSize);
+      __privateAdd(this, _target, void 0);
+      __privateAdd(this, _buffer, new ArrayBuffer(2 ** 16));
+      __privateAdd(this, _bytes, new Uint8Array(__privateGet(this, _buffer)));
+      __privateAdd(this, _maxPos, 0);
+      __privateSet(this, _target, target);
+    }
+    write(data) {
+      __privateMethod(this, _ensureSize, ensureSize_fn).call(this, this.pos + data.byteLength);
+      __privateGet(this, _bytes).set(data, this.pos);
+      this.pos += data.byteLength;
+      __privateSet(this, _maxPos, Math.max(__privateGet(this, _maxPos), this.pos));
+    }
+    finalize() {
+      __privateMethod(this, _ensureSize, ensureSize_fn).call(this, this.pos);
+      __privateGet(this, _target).buffer = __privateGet(this, _buffer).slice(0, Math.max(__privateGet(this, _maxPos), this.pos));
+    }
+  };
+  _target = new WeakMap();
+  _buffer = new WeakMap();
+  _bytes = new WeakMap();
+  _maxPos = new WeakMap();
+  _ensureSize = new WeakSet();
+  ensureSize_fn = function(size) {
+    let newLength = __privateGet(this, _buffer).byteLength;
+    while (newLength < size)
+      newLength *= 2;
+    if (newLength === __privateGet(this, _buffer).byteLength)
+      return;
+    let newBuffer = new ArrayBuffer(newLength);
+    let newBytes = new Uint8Array(newBuffer);
+    newBytes.set(__privateGet(this, _bytes), 0);
+    __privateSet(this, _buffer, newBuffer);
+    __privateSet(this, _bytes, newBytes);
+  };
+  var _target2, _sections;
+  var StreamTargetWriter = class extends Writer {
+    constructor(target) {
+      super();
+      __privateAdd(this, _target2, void 0);
+      __privateAdd(this, _sections, []);
+      __privateSet(this, _target2, target);
+    }
+    write(data) {
+      __privateGet(this, _sections).push({
+        data: data.slice(),
+        start: this.pos
+      });
+      this.pos += data.byteLength;
+    }
+    flush() {
+      if (__privateGet(this, _sections).length === 0)
+        return;
+      let chunks = [];
+      let sorted = [...__privateGet(this, _sections)].sort((a, b) => a.start - b.start);
+      chunks.push({
+        start: sorted[0].start,
+        size: sorted[0].data.byteLength
+      });
+      for (let i = 1; i < sorted.length; i++) {
+        let lastChunk = chunks[chunks.length - 1];
+        let section = sorted[i];
+        if (section.start <= lastChunk.start + lastChunk.size) {
+          lastChunk.size = Math.max(lastChunk.size, section.start + section.data.byteLength - lastChunk.start);
+        } else {
+          chunks.push({
+            start: section.start,
+            size: section.data.byteLength
+          });
+        }
+      }
+      for (let chunk of chunks) {
+        chunk.data = new Uint8Array(chunk.size);
+        for (let section of __privateGet(this, _sections)) {
+          if (chunk.start <= section.start && section.start < chunk.start + chunk.size) {
+            chunk.data.set(section.data, section.start - chunk.start);
+          }
+        }
+        __privateGet(this, _target2).options.onData?.(chunk.data, chunk.start);
+      }
+      __privateGet(this, _sections).length = 0;
+    }
+    finalize() {
+    }
+  };
+  _target2 = new WeakMap();
+  _sections = new WeakMap();
+  var DEFAULT_CHUNK_SIZE = 2 ** 24;
+  var MAX_CHUNKS_AT_ONCE = 2;
+  var _target3, _chunkSize, _chunks, _writeDataIntoChunks, writeDataIntoChunks_fn, _insertSectionIntoChunk, insertSectionIntoChunk_fn, _createChunk, createChunk_fn, _flushChunks, flushChunks_fn;
+  var ChunkedStreamTargetWriter = class extends Writer {
+    constructor(target) {
+      super();
+      __privateAdd(this, _writeDataIntoChunks);
+      __privateAdd(this, _insertSectionIntoChunk);
+      __privateAdd(this, _createChunk);
+      __privateAdd(this, _flushChunks);
+      __privateAdd(this, _target3, void 0);
+      __privateAdd(this, _chunkSize, void 0);
+      /**
+       * The data is divided up into fixed-size chunks, whose contents are first filled in RAM and then flushed out.
+       * A chunk is flushed if all of its contents have been written.
+       */
+      __privateAdd(this, _chunks, []);
+      __privateSet(this, _target3, target);
+      __privateSet(this, _chunkSize, target.options?.chunkSize ?? DEFAULT_CHUNK_SIZE);
+      if (!Number.isInteger(__privateGet(this, _chunkSize)) || __privateGet(this, _chunkSize) < 2 ** 10) {
+        throw new Error("Invalid StreamTarget options: chunkSize must be an integer not smaller than 1024.");
+      }
+    }
+    write(data) {
+      __privateMethod(this, _writeDataIntoChunks, writeDataIntoChunks_fn).call(this, data, this.pos);
+      __privateMethod(this, _flushChunks, flushChunks_fn).call(this);
+      this.pos += data.byteLength;
+    }
+    finalize() {
+      __privateMethod(this, _flushChunks, flushChunks_fn).call(this, true);
+    }
+  };
+  _target3 = new WeakMap();
+  _chunkSize = new WeakMap();
+  _chunks = new WeakMap();
+  _writeDataIntoChunks = new WeakSet();
+  writeDataIntoChunks_fn = function(data, position) {
+    let chunkIndex = __privateGet(this, _chunks).findIndex((x) => x.start <= position && position < x.start + __privateGet(this, _chunkSize));
+    if (chunkIndex === -1)
+      chunkIndex = __privateMethod(this, _createChunk, createChunk_fn).call(this, position);
+    let chunk = __privateGet(this, _chunks)[chunkIndex];
+    let relativePosition = position - chunk.start;
+    let toWrite = data.subarray(0, Math.min(__privateGet(this, _chunkSize) - relativePosition, data.byteLength));
+    chunk.data.set(toWrite, relativePosition);
+    let section = {
+      start: relativePosition,
+      end: relativePosition + toWrite.byteLength
+    };
+    __privateMethod(this, _insertSectionIntoChunk, insertSectionIntoChunk_fn).call(this, chunk, section);
+    if (chunk.written[0].start === 0 && chunk.written[0].end === __privateGet(this, _chunkSize)) {
+      chunk.shouldFlush = true;
+    }
+    if (__privateGet(this, _chunks).length > MAX_CHUNKS_AT_ONCE) {
+      for (let i = 0; i < __privateGet(this, _chunks).length - 1; i++) {
+        __privateGet(this, _chunks)[i].shouldFlush = true;
+      }
+      __privateMethod(this, _flushChunks, flushChunks_fn).call(this);
+    }
+    if (toWrite.byteLength < data.byteLength) {
+      __privateMethod(this, _writeDataIntoChunks, writeDataIntoChunks_fn).call(this, data.subarray(toWrite.byteLength), position + toWrite.byteLength);
+    }
+  };
+  _insertSectionIntoChunk = new WeakSet();
+  insertSectionIntoChunk_fn = function(chunk, section) {
+    let low = 0;
+    let high = chunk.written.length - 1;
+    let index = -1;
+    while (low <= high) {
+      let mid = Math.floor(low + (high - low + 1) / 2);
+      if (chunk.written[mid].start <= section.start) {
+        low = mid + 1;
+        index = mid;
+      } else {
+        high = mid - 1;
+      }
+    }
+    chunk.written.splice(index + 1, 0, section);
+    if (index === -1 || chunk.written[index].end < section.start)
+      index++;
+    while (index < chunk.written.length - 1 && chunk.written[index].end >= chunk.written[index + 1].start) {
+      chunk.written[index].end = Math.max(chunk.written[index].end, chunk.written[index + 1].end);
+      chunk.written.splice(index + 1, 1);
+    }
+  };
+  _createChunk = new WeakSet();
+  createChunk_fn = function(includesPosition) {
+    let start = Math.floor(includesPosition / __privateGet(this, _chunkSize)) * __privateGet(this, _chunkSize);
+    let chunk = {
+      start,
+      data: new Uint8Array(__privateGet(this, _chunkSize)),
+      written: [],
+      shouldFlush: false
+    };
+    __privateGet(this, _chunks).push(chunk);
+    __privateGet(this, _chunks).sort((a, b) => a.start - b.start);
+    return __privateGet(this, _chunks).indexOf(chunk);
+  };
+  _flushChunks = new WeakSet();
+  flushChunks_fn = function(force = false) {
+    for (let i = 0; i < __privateGet(this, _chunks).length; i++) {
+      let chunk = __privateGet(this, _chunks)[i];
+      if (!chunk.shouldFlush && !force)
+        continue;
+      for (let section of chunk.written) {
+        __privateGet(this, _target3).options.onData?.(
+          chunk.data.subarray(section.start, section.end),
+          chunk.start + section.start
+        );
+      }
+      __privateGet(this, _chunks).splice(i--, 1);
+    }
+  };
+  var FileSystemWritableFileStreamTargetWriter = class extends ChunkedStreamTargetWriter {
+    constructor(target) {
+      super(new StreamTarget({
+        onData: (data, position) => target.stream.write({
+          type: "write",
+          data,
+          position
+        }),
+        chunkSize: target.options?.chunkSize
+      }));
+    }
+  };
+
+  // src/muxer.ts
+  var GLOBAL_TIMESCALE = 1e3;
+  var SUPPORTED_VIDEO_CODECS = ["avc", "hevc", "vp9", "av1"];
+  var SUPPORTED_AUDIO_CODECS = ["aac", "opus"];
+  var TIMESTAMP_OFFSET = 2082844800;
+  var FIRST_TIMESTAMP_BEHAVIORS = ["strict", "offset", "cross-track-offset"];
+  var _options, _writer, _ftypSize, _mdat, _videoTrack, _audioTrack, _creationTime, _finalizedChunks, _nextFragmentNumber, _videoSampleQueue, _audioSampleQueue, _finalized, _validateOptions, validateOptions_fn, _writeHeader, writeHeader_fn, _computeMoovSizeUpperBound, computeMoovSizeUpperBound_fn, _prepareTracks, prepareTracks_fn, _generateMpeg4AudioSpecificConfig, generateMpeg4AudioSpecificConfig_fn, _createSampleForTrack, createSampleForTrack_fn, _addSampleToTrack, addSampleToTrack_fn, _validateTimestamp, validateTimestamp_fn, _finalizeCurrentChunk, finalizeCurrentChunk_fn, _finalizeFragment, finalizeFragment_fn, _maybeFlushStreamingTargetWriter, maybeFlushStreamingTargetWriter_fn, _ensureNotFinalized, ensureNotFinalized_fn;
+  var Muxer = class {
+    constructor(options) {
+      __privateAdd(this, _validateOptions);
+      __privateAdd(this, _writeHeader);
+      __privateAdd(this, _computeMoovSizeUpperBound);
+      __privateAdd(this, _prepareTracks);
+      // https://wiki.multimedia.cx/index.php/MPEG-4_Audio
+      __privateAdd(this, _generateMpeg4AudioSpecificConfig);
+      __privateAdd(this, _createSampleForTrack);
+      __privateAdd(this, _addSampleToTrack);
+      __privateAdd(this, _validateTimestamp);
+      __privateAdd(this, _finalizeCurrentChunk);
+      __privateAdd(this, _finalizeFragment);
+      __privateAdd(this, _maybeFlushStreamingTargetWriter);
+      __privateAdd(this, _ensureNotFinalized);
+      __privateAdd(this, _options, void 0);
+      __privateAdd(this, _writer, void 0);
+      __privateAdd(this, _ftypSize, void 0);
+      __privateAdd(this, _mdat, void 0);
+      __privateAdd(this, _videoTrack, null);
+      __privateAdd(this, _audioTrack, null);
+      __privateAdd(this, _creationTime, Math.floor(Date.now() / 1e3) + TIMESTAMP_OFFSET);
+      __privateAdd(this, _finalizedChunks, []);
+      // Fields for fragmented MP4:
+      __privateAdd(this, _nextFragmentNumber, 1);
+      __privateAdd(this, _videoSampleQueue, []);
+      __privateAdd(this, _audioSampleQueue, []);
+      __privateAdd(this, _finalized, false);
+      __privateMethod(this, _validateOptions, validateOptions_fn).call(this, options);
+      options.video = deepClone(options.video);
+      options.audio = deepClone(options.audio);
+      options.fastStart = deepClone(options.fastStart);
+      this.target = options.target;
+      __privateSet(this, _options, {
+        firstTimestampBehavior: "strict",
+        ...options
+      });
+      if (options.target instanceof ArrayBufferTarget) {
+        __privateSet(this, _writer, new ArrayBufferTargetWriter(options.target));
+      } else if (options.target instanceof StreamTarget) {
+        __privateSet(this, _writer, options.target.options?.chunked ? new ChunkedStreamTargetWriter(options.target) : new StreamTargetWriter(options.target));
+      } else if (options.target instanceof FileSystemWritableFileStreamTarget) {
+        __privateSet(this, _writer, new FileSystemWritableFileStreamTargetWriter(options.target));
+      } else {
+        throw new Error(`Invalid target: ${options.target}`);
+      }
+      __privateMethod(this, _prepareTracks, prepareTracks_fn).call(this);
+      __privateMethod(this, _writeHeader, writeHeader_fn).call(this);
+    }
+    addVideoChunk(sample, meta, timestamp, compositionTimeOffset) {
+      if (!(sample instanceof EncodedVideoChunk)) {
+        throw new TypeError("addVideoChunk's first argument (sample) must be of type EncodedVideoChunk.");
+      }
+      if (meta && typeof meta !== "object") {
+        throw new TypeError("addVideoChunk's second argument (meta), when provided, must be an object.");
+      }
+      if (timestamp !== void 0 && (!Number.isFinite(timestamp) || timestamp < 0)) {
+        throw new TypeError(
+          "addVideoChunk's third argument (timestamp), when provided, must be a non-negative real number."
+        );
+      }
+      if (compositionTimeOffset !== void 0 && !Number.isFinite(compositionTimeOffset)) {
+        throw new TypeError(
+          "addVideoChunk's fourth argument (compositionTimeOffset), when provided, must be a real number."
+        );
+      }
+      let data = new Uint8Array(sample.byteLength);
+      sample.copyTo(data);
+      this.addVideoChunkRaw(
+        data,
+        sample.type,
+        timestamp ?? sample.timestamp,
+        sample.duration,
+        meta,
+        compositionTimeOffset
+      );
+    }
+    addVideoChunkRaw(data, type, timestamp, duration, meta, compositionTimeOffset) {
+      if (!(data instanceof Uint8Array)) {
+        throw new TypeError("addVideoChunkRaw's first argument (data) must be an instance of Uint8Array.");
+      }
+      if (type !== "key" && type !== "delta") {
+        throw new TypeError("addVideoChunkRaw's second argument (type) must be either 'key' or 'delta'.");
+      }
+      if (!Number.isFinite(timestamp) || timestamp < 0) {
+        throw new TypeError("addVideoChunkRaw's third argument (timestamp) must be a non-negative real number.");
+      }
+      if (!Number.isFinite(duration) || duration < 0) {
+        throw new TypeError("addVideoChunkRaw's fourth argument (duration) must be a non-negative real number.");
+      }
+      if (meta && typeof meta !== "object") {
+        throw new TypeError("addVideoChunkRaw's fifth argument (meta), when provided, must be an object.");
+      }
+      if (compositionTimeOffset !== void 0 && !Number.isFinite(compositionTimeOffset)) {
+        throw new TypeError(
+          "addVideoChunkRaw's sixth argument (compositionTimeOffset), when provided, must be a real number."
+        );
+      }
+      __privateMethod(this, _ensureNotFinalized, ensureNotFinalized_fn).call(this);
+      if (!__privateGet(this, _options).video)
+        throw new Error("No video track declared.");
+      if (typeof __privateGet(this, _options).fastStart === "object" && __privateGet(this, _videoTrack).samples.length === __privateGet(this, _options).fastStart.expectedVideoChunks) {
+        throw new Error(`Cannot add more video chunks than specified in 'fastStart' (${__privateGet(this, _options).fastStart.expectedVideoChunks}).`);
+      }
+      let videoSample = __privateMethod(this, _createSampleForTrack, createSampleForTrack_fn).call(this, __privateGet(this, _videoTrack), data, type, timestamp, duration, meta, compositionTimeOffset);
+      if (__privateGet(this, _options).fastStart === "fragmented" && __privateGet(this, _audioTrack)) {
+        while (__privateGet(this, _audioSampleQueue).length > 0 && __privateGet(this, _audioSampleQueue)[0].decodeTimestamp <= videoSample.decodeTimestamp) {
+          let audioSample = __privateGet(this, _audioSampleQueue).shift();
+          __privateMethod(this, _addSampleToTrack, addSampleToTrack_fn).call(this, __privateGet(this, _audioTrack), audioSample);
+        }
+        if (videoSample.decodeTimestamp <= __privateGet(this, _audioTrack).lastDecodeTimestamp) {
+          __privateMethod(this, _addSampleToTrack, addSampleToTrack_fn).call(this, __privateGet(this, _videoTrack), videoSample);
+        } else {
+          __privateGet(this, _videoSampleQueue).push(videoSample);
+        }
+      } else {
+        __privateMethod(this, _addSampleToTrack, addSampleToTrack_fn).call(this, __privateGet(this, _videoTrack), videoSample);
+      }
+    }
+    addAudioChunk(sample, meta, timestamp) {
+      if (!(sample instanceof EncodedAudioChunk)) {
+        throw new TypeError("addAudioChunk's first argument (sample) must be of type EncodedAudioChunk.");
+      }
+      if (meta && typeof meta !== "object") {
+        throw new TypeError("addAudioChunk's second argument (meta), when provided, must be an object.");
+      }
+      if (timestamp !== void 0 && (!Number.isFinite(timestamp) || timestamp < 0)) {
+        throw new TypeError(
+          "addAudioChunk's third argument (timestamp), when provided, must be a non-negative real number."
+        );
+      }
+      let data = new Uint8Array(sample.byteLength);
+      sample.copyTo(data);
+      this.addAudioChunkRaw(data, sample.type, timestamp ?? sample.timestamp, sample.duration, meta);
+    }
+    addAudioChunkRaw(data, type, timestamp, duration, meta) {
+      if (!(data instanceof Uint8Array)) {
+        throw new TypeError("addAudioChunkRaw's first argument (data) must be an instance of Uint8Array.");
+      }
+      if (type !== "key" && type !== "delta") {
+        throw new TypeError("addAudioChunkRaw's second argument (type) must be either 'key' or 'delta'.");
+      }
+      if (!Number.isFinite(timestamp) || timestamp < 0) {
+        throw new TypeError("addAudioChunkRaw's third argument (timestamp) must be a non-negative real number.");
+      }
+      if (!Number.isFinite(duration) || duration < 0) {
+        throw new TypeError("addAudioChunkRaw's fourth argument (duration) must be a non-negative real number.");
+      }
+      if (meta && typeof meta !== "object") {
+        throw new TypeError("addAudioChunkRaw's fifth argument (meta), when provided, must be an object.");
+      }
+      __privateMethod(this, _ensureNotFinalized, ensureNotFinalized_fn).call(this);
+      if (!__privateGet(this, _options).audio)
+        throw new Error("No audio track declared.");
+      if (typeof __privateGet(this, _options).fastStart === "object" && __privateGet(this, _audioTrack).samples.length === __privateGet(this, _options).fastStart.expectedAudioChunks) {
+        throw new Error(`Cannot add more audio chunks than specified in 'fastStart' (${__privateGet(this, _options).fastStart.expectedAudioChunks}).`);
+      }
+      let audioSample = __privateMethod(this, _createSampleForTrack, createSampleForTrack_fn).call(this, __privateGet(this, _audioTrack), data, type, timestamp, duration, meta);
+      if (__privateGet(this, _options).fastStart === "fragmented" && __privateGet(this, _videoTrack)) {
+        while (__privateGet(this, _videoSampleQueue).length > 0 && __privateGet(this, _videoSampleQueue)[0].decodeTimestamp <= audioSample.decodeTimestamp) {
+          let videoSample = __privateGet(this, _videoSampleQueue).shift();
+          __privateMethod(this, _addSampleToTrack, addSampleToTrack_fn).call(this, __privateGet(this, _videoTrack), videoSample);
+        }
+        if (audioSample.decodeTimestamp <= __privateGet(this, _videoTrack).lastDecodeTimestamp) {
+          __privateMethod(this, _addSampleToTrack, addSampleToTrack_fn).call(this, __privateGet(this, _audioTrack), audioSample);
+        } else {
+          __privateGet(this, _audioSampleQueue).push(audioSample);
+        }
+      } else {
+        __privateMethod(this, _addSampleToTrack, addSampleToTrack_fn).call(this, __privateGet(this, _audioTrack), audioSample);
+      }
+    }
+    /** Finalizes the file, making it ready for use. Must be called after all video and audio chunks have been added. */
+    finalize() {
+      if (__privateGet(this, _finalized)) {
+        throw new Error("Cannot finalize a muxer more than once.");
+      }
+      if (__privateGet(this, _options).fastStart === "fragmented") {
+        for (let videoSample of __privateGet(this, _videoSampleQueue))
+          __privateMethod(this, _addSampleToTrack, addSampleToTrack_fn).call(this, __privateGet(this, _videoTrack), videoSample);
+        for (let audioSample of __privateGet(this, _audioSampleQueue))
+          __privateMethod(this, _addSampleToTrack, addSampleToTrack_fn).call(this, __privateGet(this, _audioTrack), audioSample);
+        __privateMethod(this, _finalizeFragment, finalizeFragment_fn).call(this, false);
+      } else {
+        if (__privateGet(this, _videoTrack))
+          __privateMethod(this, _finalizeCurrentChunk, finalizeCurrentChunk_fn).call(this, __privateGet(this, _videoTrack));
+        if (__privateGet(this, _audioTrack))
+          __privateMethod(this, _finalizeCurrentChunk, finalizeCurrentChunk_fn).call(this, __privateGet(this, _audioTrack));
+      }
+      let tracks = [__privateGet(this, _videoTrack), __privateGet(this, _audioTrack)].filter(Boolean);
+      if (__privateGet(this, _options).fastStart === "in-memory") {
+        let mdatSize;
+        for (let i = 0; i < 2; i++) {
+          let movieBox2 = moov(tracks, __privateGet(this, _creationTime));
+          let movieBoxSize = __privateGet(this, _writer).measureBox(movieBox2);
+          mdatSize = __privateGet(this, _writer).measureBox(__privateGet(this, _mdat));
+          let currentChunkPos = __privateGet(this, _writer).pos + movieBoxSize + mdatSize;
+          for (let chunk of __privateGet(this, _finalizedChunks)) {
+            chunk.offset = currentChunkPos;
+            for (let { data } of chunk.samples) {
+              currentChunkPos += data.byteLength;
+              mdatSize += data.byteLength;
+            }
+          }
+          if (currentChunkPos < 2 ** 32)
+            break;
+          if (mdatSize >= 2 ** 32)
+            __privateGet(this, _mdat).largeSize = true;
+        }
+        let movieBox = moov(tracks, __privateGet(this, _creationTime));
+        __privateGet(this, _writer).writeBox(movieBox);
+        __privateGet(this, _mdat).size = mdatSize;
+        __privateGet(this, _writer).writeBox(__privateGet(this, _mdat));
+        for (let chunk of __privateGet(this, _finalizedChunks)) {
+          for (let sample of chunk.samples) {
+            __privateGet(this, _writer).write(sample.data);
+            sample.data = null;
+          }
+        }
+      } else if (__privateGet(this, _options).fastStart === "fragmented") {
+        let startPos = __privateGet(this, _writer).pos;
+        let mfraBox = mfra(tracks);
+        __privateGet(this, _writer).writeBox(mfraBox);
+        let mfraBoxSize = __privateGet(this, _writer).pos - startPos;
+        __privateGet(this, _writer).seek(__privateGet(this, _writer).pos - 4);
+        __privateGet(this, _writer).writeU32(mfraBoxSize);
+      } else {
+        let mdatPos = __privateGet(this, _writer).offsets.get(__privateGet(this, _mdat));
+        let mdatSize = __privateGet(this, _writer).pos - mdatPos;
+        __privateGet(this, _mdat).size = mdatSize;
+        __privateGet(this, _mdat).largeSize = mdatSize >= 2 ** 32;
+        __privateGet(this, _writer).patchBox(__privateGet(this, _mdat));
+        let movieBox = moov(tracks, __privateGet(this, _creationTime));
+        if (typeof __privateGet(this, _options).fastStart === "object") {
+          __privateGet(this, _writer).seek(__privateGet(this, _ftypSize));
+          __privateGet(this, _writer).writeBox(movieBox);
+          let remainingBytes = mdatPos - __privateGet(this, _writer).pos;
+          __privateGet(this, _writer).writeBox(free(remainingBytes));
+        } else {
+          __privateGet(this, _writer).writeBox(movieBox);
+        }
+      }
+      __privateMethod(this, _maybeFlushStreamingTargetWriter, maybeFlushStreamingTargetWriter_fn).call(this);
+      __privateGet(this, _writer).finalize();
+      __privateSet(this, _finalized, true);
+    }
+  };
+  _options = new WeakMap();
+  _writer = new WeakMap();
+  _ftypSize = new WeakMap();
+  _mdat = new WeakMap();
+  _videoTrack = new WeakMap();
+  _audioTrack = new WeakMap();
+  _creationTime = new WeakMap();
+  _finalizedChunks = new WeakMap();
+  _nextFragmentNumber = new WeakMap();
+  _videoSampleQueue = new WeakMap();
+  _audioSampleQueue = new WeakMap();
+  _finalized = new WeakMap();
+  _validateOptions = new WeakSet();
+  validateOptions_fn = function(options) {
+    if (typeof options !== "object") {
+      throw new TypeError("The muxer requires an options object to be passed to its constructor.");
+    }
+    if (!(options.target instanceof Target)) {
+      throw new TypeError("The target must be provided and an instance of Target.");
+    }
+    if (options.video) {
+      if (!SUPPORTED_VIDEO_CODECS.includes(options.video.codec)) {
+        throw new TypeError(`Unsupported video codec: ${options.video.codec}`);
+      }
+      if (!Number.isInteger(options.video.width) || options.video.width <= 0) {
+        throw new TypeError(`Invalid video width: ${options.video.width}. Must be a positive integer.`);
+      }
+      if (!Number.isInteger(options.video.height) || options.video.height <= 0) {
+        throw new TypeError(`Invalid video height: ${options.video.height}. Must be a positive integer.`);
+      }
+      const videoRotation = options.video.rotation;
+      if (typeof videoRotation === "number" && ![0, 90, 180, 270].includes(videoRotation)) {
+        throw new TypeError(`Invalid video rotation: ${videoRotation}. Has to be 0, 90, 180 or 270.`);
+      } else if (Array.isArray(videoRotation) && (videoRotation.length !== 9 || videoRotation.some((value) => typeof value !== "number"))) {
+        throw new TypeError(`Invalid video transformation matrix: ${videoRotation.join()}`);
+      }
+      if (options.video.frameRate !== void 0 && (!Number.isInteger(options.video.frameRate) || options.video.frameRate <= 0)) {
+        throw new TypeError(
+          `Invalid video frame rate: ${options.video.frameRate}. Must be a positive integer.`
+        );
+      }
+    }
+    if (options.audio) {
+      if (!SUPPORTED_AUDIO_CODECS.includes(options.audio.codec)) {
+        throw new TypeError(`Unsupported audio codec: ${options.audio.codec}`);
+      }
+      if (!Number.isInteger(options.audio.numberOfChannels) || options.audio.numberOfChannels <= 0) {
+        throw new TypeError(
+          `Invalid number of audio channels: ${options.audio.numberOfChannels}. Must be a positive integer.`
+        );
+      }
+      if (!Number.isInteger(options.audio.sampleRate) || options.audio.sampleRate <= 0) {
+        throw new TypeError(
+          `Invalid audio sample rate: ${options.audio.sampleRate}. Must be a positive integer.`
+        );
+      }
+    }
+    if (options.firstTimestampBehavior && !FIRST_TIMESTAMP_BEHAVIORS.includes(options.firstTimestampBehavior)) {
+      throw new TypeError(`Invalid first timestamp behavior: ${options.firstTimestampBehavior}`);
+    }
+    if (typeof options.fastStart === "object") {
+      if (options.video) {
+        if (options.fastStart.expectedVideoChunks === void 0) {
+          throw new TypeError(`'fastStart' is an object but is missing property 'expectedVideoChunks'.`);
+        } else if (!Number.isInteger(options.fastStart.expectedVideoChunks) || options.fastStart.expectedVideoChunks < 0) {
+          throw new TypeError(`'expectedVideoChunks' must be a non-negative integer.`);
+        }
+      }
+      if (options.audio) {
+        if (options.fastStart.expectedAudioChunks === void 0) {
+          throw new TypeError(`'fastStart' is an object but is missing property 'expectedAudioChunks'.`);
+        } else if (!Number.isInteger(options.fastStart.expectedAudioChunks) || options.fastStart.expectedAudioChunks < 0) {
+          throw new TypeError(`'expectedAudioChunks' must be a non-negative integer.`);
+        }
+      }
+    } else if (![false, "in-memory", "fragmented"].includes(options.fastStart)) {
+      throw new TypeError(`'fastStart' option must be false, 'in-memory', 'fragmented' or an object.`);
+    }
+  };
+  _writeHeader = new WeakSet();
+  writeHeader_fn = function() {
+    __privateGet(this, _writer).writeBox(ftyp({
+      holdsAvc: __privateGet(this, _options).video?.codec === "avc",
+      fragmented: __privateGet(this, _options).fastStart === "fragmented"
+    }));
+    __privateSet(this, _ftypSize, __privateGet(this, _writer).pos);
+    if (__privateGet(this, _options).fastStart === "in-memory") {
+      __privateSet(this, _mdat, mdat(false));
+    } else if (__privateGet(this, _options).fastStart === "fragmented") {
+    } else {
+      if (typeof __privateGet(this, _options).fastStart === "object") {
+        let moovSizeUpperBound = __privateMethod(this, _computeMoovSizeUpperBound, computeMoovSizeUpperBound_fn).call(this);
+        __privateGet(this, _writer).seek(__privateGet(this, _writer).pos + moovSizeUpperBound);
+      }
+      __privateSet(this, _mdat, mdat(true));
+      __privateGet(this, _writer).writeBox(__privateGet(this, _mdat));
+    }
+    __privateMethod(this, _maybeFlushStreamingTargetWriter, maybeFlushStreamingTargetWriter_fn).call(this);
+  };
+  _computeMoovSizeUpperBound = new WeakSet();
+  computeMoovSizeUpperBound_fn = function() {
+    if (typeof __privateGet(this, _options).fastStart !== "object")
+      return;
+    let upperBound = 0;
+    let sampleCounts = [
+      __privateGet(this, _options).fastStart.expectedVideoChunks,
+      __privateGet(this, _options).fastStart.expectedAudioChunks
+    ];
+    for (let n of sampleCounts) {
+      if (!n)
+        continue;
+      upperBound += (4 + 4) * Math.ceil(2 / 3 * n);
+      upperBound += 4 * n;
+      upperBound += (4 + 4 + 4) * Math.ceil(2 / 3 * n);
+      upperBound += 4 * n;
+      upperBound += 8 * n;
+    }
+    upperBound += 4096;
+    return upperBound;
+  };
+  _prepareTracks = new WeakSet();
+  prepareTracks_fn = function() {
+    if (__privateGet(this, _options).video) {
+      __privateSet(this, _videoTrack, {
+        id: 1,
+        info: {
+          type: "video",
+          codec: __privateGet(this, _options).video.codec,
+          width: __privateGet(this, _options).video.width,
+          height: __privateGet(this, _options).video.height,
+          rotation: __privateGet(this, _options).video.rotation ?? 0,
+          decoderConfig: null
+        },
+        // The fallback contains many common frame rates as factors
+        timescale: __privateGet(this, _options).video.frameRate ?? 57600,
+        samples: [],
+        finalizedChunks: [],
+        currentChunk: null,
+        firstDecodeTimestamp: void 0,
+        lastDecodeTimestamp: -1,
+        timeToSampleTable: [],
+        compositionTimeOffsetTable: [],
+        lastTimescaleUnits: null,
+        lastSample: null,
+        compactlyCodedChunkTable: []
+      });
+    }
+    if (__privateGet(this, _options).audio) {
+      __privateSet(this, _audioTrack, {
+        id: __privateGet(this, _options).video ? 2 : 1,
+        info: {
+          type: "audio",
+          codec: __privateGet(this, _options).audio.codec,
+          numberOfChannels: __privateGet(this, _options).audio.numberOfChannels,
+          sampleRate: __privateGet(this, _options).audio.sampleRate,
+          decoderConfig: null
+        },
+        timescale: __privateGet(this, _options).audio.sampleRate,
+        samples: [],
+        finalizedChunks: [],
+        currentChunk: null,
+        firstDecodeTimestamp: void 0,
+        lastDecodeTimestamp: -1,
+        timeToSampleTable: [],
+        compositionTimeOffsetTable: [],
+        lastTimescaleUnits: null,
+        lastSample: null,
+        compactlyCodedChunkTable: []
+      });
+      if (__privateGet(this, _options).audio.codec === "aac") {
+        let guessedCodecPrivate = __privateMethod(this, _generateMpeg4AudioSpecificConfig, generateMpeg4AudioSpecificConfig_fn).call(
+          this,
+          2,
+          // Object type for AAC-LC, since it's the most common
+          __privateGet(this, _options).audio.sampleRate,
+          __privateGet(this, _options).audio.numberOfChannels
+        );
+        __privateGet(this, _audioTrack).info.decoderConfig = {
+          codec: __privateGet(this, _options).audio.codec,
+          description: guessedCodecPrivate,
+          numberOfChannels: __privateGet(this, _options).audio.numberOfChannels,
+          sampleRate: __privateGet(this, _options).audio.sampleRate
+        };
+      }
+    }
+  };
+  _generateMpeg4AudioSpecificConfig = new WeakSet();
+  generateMpeg4AudioSpecificConfig_fn = function(objectType, sampleRate, numberOfChannels) {
+    let frequencyIndices = [96e3, 88200, 64e3, 48e3, 44100, 32e3, 24e3, 22050, 16e3, 12e3, 11025, 8e3, 7350];
+    let frequencyIndex = frequencyIndices.indexOf(sampleRate);
+    let channelConfig = numberOfChannels;
+    let configBits = "";
+    configBits += objectType.toString(2).padStart(5, "0");
+    configBits += frequencyIndex.toString(2).padStart(4, "0");
+    if (frequencyIndex === 15)
+      configBits += sampleRate.toString(2).padStart(24, "0");
+    configBits += channelConfig.toString(2).padStart(4, "0");
+    let paddingLength = Math.ceil(configBits.length / 8) * 8;
+    configBits = configBits.padEnd(paddingLength, "0");
+    let configBytes = new Uint8Array(configBits.length / 8);
+    for (let i = 0; i < configBits.length; i += 8) {
+      configBytes[i / 8] = parseInt(configBits.slice(i, i + 8), 2);
+    }
+    return configBytes;
+  };
+  _createSampleForTrack = new WeakSet();
+  createSampleForTrack_fn = function(track, data, type, timestamp, duration, meta, compositionTimeOffset) {
+    let presentationTimestampInSeconds = timestamp / 1e6;
+    let decodeTimestampInSeconds = (timestamp - (compositionTimeOffset ?? 0)) / 1e6;
+    let durationInSeconds = duration / 1e6;
+    let adjusted = __privateMethod(this, _validateTimestamp, validateTimestamp_fn).call(this, presentationTimestampInSeconds, decodeTimestampInSeconds, track);
+    presentationTimestampInSeconds = adjusted.presentationTimestamp;
+    decodeTimestampInSeconds = adjusted.decodeTimestamp;
+    if (meta?.decoderConfig) {
+      if (track.info.decoderConfig === null) {
+        track.info.decoderConfig = meta.decoderConfig;
+      } else {
+        Object.assign(track.info.decoderConfig, meta.decoderConfig);
+      }
+    }
+    let sample = {
+      presentationTimestamp: presentationTimestampInSeconds,
+      decodeTimestamp: decodeTimestampInSeconds,
+      duration: durationInSeconds,
+      data,
+      size: data.byteLength,
+      type,
+      // Will be refined once the next sample comes in
+      timescaleUnitsToNextSample: intoTimescale(durationInSeconds, track.timescale)
+    };
+    return sample;
+  };
+  _addSampleToTrack = new WeakSet();
+  addSampleToTrack_fn = function(track, sample) {
+    if (__privateGet(this, _options).fastStart !== "fragmented") {
+      track.samples.push(sample);
+    }
+    const sampleCompositionTimeOffset = intoTimescale(sample.presentationTimestamp - sample.decodeTimestamp, track.timescale);
+    if (track.lastTimescaleUnits !== null) {
+      let timescaleUnits = intoTimescale(sample.decodeTimestamp, track.timescale, false);
+      let delta = Math.round(timescaleUnits - track.lastTimescaleUnits);
+      track.lastTimescaleUnits += delta;
+      track.lastSample.timescaleUnitsToNextSample = delta;
+      if (__privateGet(this, _options).fastStart !== "fragmented") {
+        let lastTableEntry = last(track.timeToSampleTable);
+        if (lastTableEntry.sampleCount === 1) {
+          lastTableEntry.sampleDelta = delta;
+          lastTableEntry.sampleCount++;
+        } else if (lastTableEntry.sampleDelta === delta) {
+          lastTableEntry.sampleCount++;
+        } else {
+          lastTableEntry.sampleCount--;
+          track.timeToSampleTable.push({
+            sampleCount: 2,
+            sampleDelta: delta
+          });
+        }
+        const lastCompositionTimeOffsetTableEntry = last(track.compositionTimeOffsetTable);
+        if (lastCompositionTimeOffsetTableEntry.sampleCompositionTimeOffset === sampleCompositionTimeOffset) {
+          lastCompositionTimeOffsetTableEntry.sampleCount++;
+        } else {
+          track.compositionTimeOffsetTable.push({
+            sampleCount: 1,
+            sampleCompositionTimeOffset
+          });
+        }
+      }
+    } else {
+      track.lastTimescaleUnits = 0;
+      if (__privateGet(this, _options).fastStart !== "fragmented") {
+        track.timeToSampleTable.push({
+          sampleCount: 1,
+          sampleDelta: intoTimescale(sample.duration, track.timescale)
+        });
+        track.compositionTimeOffsetTable.push({
+          sampleCount: 1,
+          sampleCompositionTimeOffset
+        });
+      }
+    }
+    track.lastSample = sample;
+    let beginNewChunk = false;
+    if (!track.currentChunk) {
+      beginNewChunk = true;
+    } else {
+      let currentChunkDuration = sample.presentationTimestamp - track.currentChunk.startTimestamp;
+      if (__privateGet(this, _options).fastStart === "fragmented") {
+        let mostImportantTrack = __privateGet(this, _videoTrack) ?? __privateGet(this, _audioTrack);
+        if (track === mostImportantTrack && sample.type === "key" && currentChunkDuration >= 1) {
+          beginNewChunk = true;
+          __privateMethod(this, _finalizeFragment, finalizeFragment_fn).call(this);
+        }
+      } else {
+        beginNewChunk = currentChunkDuration >= 0.5;
+      }
+    }
+    if (beginNewChunk) {
+      if (track.currentChunk) {
+        __privateMethod(this, _finalizeCurrentChunk, finalizeCurrentChunk_fn).call(this, track);
+      }
+      track.currentChunk = {
+        startTimestamp: sample.presentationTimestamp,
+        samples: []
+      };
+    }
+    track.currentChunk.samples.push(sample);
+  };
+  _validateTimestamp = new WeakSet();
+  validateTimestamp_fn = function(presentationTimestamp, decodeTimestamp, track) {
+    const strictTimestampBehavior = __privateGet(this, _options).firstTimestampBehavior === "strict";
+    const noLastDecodeTimestamp = track.lastDecodeTimestamp === -1;
+    const timestampNonZero = decodeTimestamp !== 0;
+    if (strictTimestampBehavior && noLastDecodeTimestamp && timestampNonZero) {
+      throw new Error(
+        `The first chunk for your media track must have a timestamp of 0 (received DTS=${decodeTimestamp}).Non-zero first timestamps are often caused by directly piping frames or audio data from a MediaStreamTrack into the encoder. Their timestamps are typically relative to the age of thedocument, which is probably what you want.
+
+If you want to offset all timestamps of a track such that the first one is zero, set firstTimestampBehavior: 'offset' in the options.
+`
+      );
+    } else if (__privateGet(this, _options).firstTimestampBehavior === "offset" || __privateGet(this, _options).firstTimestampBehavior === "cross-track-offset") {
+      if (track.firstDecodeTimestamp === void 0) {
+        track.firstDecodeTimestamp = decodeTimestamp;
+      }
+      let baseDecodeTimestamp;
+      if (__privateGet(this, _options).firstTimestampBehavior === "offset") {
+        baseDecodeTimestamp = track.firstDecodeTimestamp;
+      } else {
+        baseDecodeTimestamp = Math.min(
+          __privateGet(this, _videoTrack)?.firstDecodeTimestamp ?? Infinity,
+          __privateGet(this, _audioTrack)?.firstDecodeTimestamp ?? Infinity
+        );
+      }
+      decodeTimestamp -= baseDecodeTimestamp;
+      presentationTimestamp -= baseDecodeTimestamp;
+    }
+    if (decodeTimestamp < track.lastDecodeTimestamp) {
+      throw new Error(
+        `Timestamps must be monotonically increasing (DTS went from ${track.lastDecodeTimestamp * 1e6} to ${decodeTimestamp * 1e6}).`
+      );
+    }
+    track.lastDecodeTimestamp = decodeTimestamp;
+    return { presentationTimestamp, decodeTimestamp };
+  };
+  _finalizeCurrentChunk = new WeakSet();
+  finalizeCurrentChunk_fn = function(track) {
+    if (__privateGet(this, _options).fastStart === "fragmented") {
+      throw new Error("Can't finalize individual chunks if 'fastStart' is set to 'fragmented'.");
+    }
+    if (!track.currentChunk)
+      return;
+    track.finalizedChunks.push(track.currentChunk);
+    __privateGet(this, _finalizedChunks).push(track.currentChunk);
+    if (track.compactlyCodedChunkTable.length === 0 || last(track.compactlyCodedChunkTable).samplesPerChunk !== track.currentChunk.samples.length) {
+      track.compactlyCodedChunkTable.push({
+        firstChunk: track.finalizedChunks.length,
+        // 1-indexed
+        samplesPerChunk: track.currentChunk.samples.length
+      });
+    }
+    if (__privateGet(this, _options).fastStart === "in-memory") {
+      track.currentChunk.offset = 0;
+      return;
+    }
+    track.currentChunk.offset = __privateGet(this, _writer).pos;
+    for (let sample of track.currentChunk.samples) {
+      __privateGet(this, _writer).write(sample.data);
+      sample.data = null;
+    }
+    __privateMethod(this, _maybeFlushStreamingTargetWriter, maybeFlushStreamingTargetWriter_fn).call(this);
+  };
+  _finalizeFragment = new WeakSet();
+  finalizeFragment_fn = function(flushStreamingWriter = true) {
+    if (__privateGet(this, _options).fastStart !== "fragmented") {
+      throw new Error("Can't finalize a fragment unless 'fastStart' is set to 'fragmented'.");
+    }
+    let tracks = [__privateGet(this, _videoTrack), __privateGet(this, _audioTrack)].filter((track) => track && track.currentChunk);
+    if (tracks.length === 0)
+      return;
+    let fragmentNumber = __privateWrapper(this, _nextFragmentNumber)._++;
+    if (fragmentNumber === 1) {
+      let movieBox = moov(tracks, __privateGet(this, _creationTime), true);
+      __privateGet(this, _writer).writeBox(movieBox);
+    }
+    let moofOffset = __privateGet(this, _writer).pos;
+    let moofBox = moof(fragmentNumber, tracks);
+    __privateGet(this, _writer).writeBox(moofBox);
+    {
+      let mdatBox = mdat(false);
+      let totalTrackSampleSize = 0;
+      for (let track of tracks) {
+        for (let sample of track.currentChunk.samples) {
+          totalTrackSampleSize += sample.size;
+        }
+      }
+      let mdatSize = __privateGet(this, _writer).measureBox(mdatBox) + totalTrackSampleSize;
+      if (mdatSize >= 2 ** 32) {
+        mdatBox.largeSize = true;
+        mdatSize = __privateGet(this, _writer).measureBox(mdatBox) + totalTrackSampleSize;
+      }
+      mdatBox.size = mdatSize;
+      __privateGet(this, _writer).writeBox(mdatBox);
+    }
+    for (let track of tracks) {
+      track.currentChunk.offset = __privateGet(this, _writer).pos;
+      track.currentChunk.moofOffset = moofOffset;
+      for (let sample of track.currentChunk.samples) {
+        __privateGet(this, _writer).write(sample.data);
+        sample.data = null;
+      }
+    }
+    let endPos = __privateGet(this, _writer).pos;
+    __privateGet(this, _writer).seek(__privateGet(this, _writer).offsets.get(moofBox));
+    let newMoofBox = moof(fragmentNumber, tracks);
+    __privateGet(this, _writer).writeBox(newMoofBox);
+    __privateGet(this, _writer).seek(endPos);
+    for (let track of tracks) {
+      track.finalizedChunks.push(track.currentChunk);
+      __privateGet(this, _finalizedChunks).push(track.currentChunk);
+      track.currentChunk = null;
+    }
+    if (flushStreamingWriter) {
+      __privateMethod(this, _maybeFlushStreamingTargetWriter, maybeFlushStreamingTargetWriter_fn).call(this);
+    }
+  };
+  _maybeFlushStreamingTargetWriter = new WeakSet();
+  maybeFlushStreamingTargetWriter_fn = function() {
+    if (__privateGet(this, _writer) instanceof StreamTargetWriter) {
+      __privateGet(this, _writer).flush();
+    }
+  };
+  _ensureNotFinalized = new WeakSet();
+  ensureNotFinalized_fn = function() {
+    if (__privateGet(this, _finalized)) {
+      throw new Error("Cannot add new video or audio chunks after the file has been finalized.");
+    }
+  };
+  return __toCommonJS(src_exports);
+})();
+if (typeof module === "object" && typeof module.exports === "object") Object.assign(module.exports, Mp4Muxer)
+
+</script>
+<script>
+const SAMPLE = `# Speak Fast And Clear!
+## Day 01 · Introduce Yourself
+
+Read it out loud. Fill in the blanks.
+
+## Greeting
+Hello everyone! My name is ______.
+I'm from ______.
+
+## About Me
+I'm ______ years old.
+I work as a ______.
+
+## My Daily Life
+Every morning, I ______.
+In my free time, I love ______.
+
+## My Goal
+I'm learning English because ______.
+
+## Closing
+Thank you for listening. It's nice to meet you!
+
+#### Read it again, faster.`;
+
+const W = 1080, H = 1920, PAD = 96;   // layout space; output is scaled from this
+const QUALITY = {
+  1080: { w: 1080, h: 1920, bitrate: 8_000_000,  label: '1080 × 1920' },
+  1440: { w: 1440, h: 2560, bitrate: 16_000_000, label: '1440 × 2560 (2K)' },
+  2160: { w: 2160, h: 3840, bitrate: 35_000_000, label: '2160 × 3840 (4K)' },
+};
+let OUT = QUALITY[1080];
+function useOutputSize(q) { if (cv.width !== q.w) { cv.width = q.w; cv.height = q.h; } }
+const $ = id => document.getElementById(id);
+const cv = $('cv'), ctx = cv.getContext('2d');
+const ed = $('editor'), durEl = $('dur'), sizeEl = $('size'), alignEl = $('align');
+
+const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+// Plain text → editor blocks. Still understands #, ##, #### if someone pastes them.
+function textToHTML(t) {
+  return t.replace(/\r/g, '').split('\n').map(line => {
+    const m = line.match(/^(#{1,4})\s+(.*)$/);
+    if (!line.trim()) return '<p><br></p>';
+    if (m) { const tag = m[1].length === 1 ? 'h1' : m[1].length === 2 ? 'h2' : 'h4'; return `<${tag}>${esc(m[2])}</${tag}>`; }
+    return `<p>${esc(line)}</p>`;
+  }).join('');
+}
+
+let saved = null;
+try { saved = localStorage.getItem('reel-html'); } catch (e) {}
+ed.innerHTML = saved || textToHTML(SAMPLE);
+
+document.execCommand('styleWithCSS', false, false);
+document.execCommand('defaultParagraphSeparator', false, 'p');
+
+// ---------- toolbar ----------
+const toolbar = $('toolbar');
+toolbar.addEventListener('mousedown', e => { if (e.target.closest('button')) e.preventDefault(); }); // keep selection
+toolbar.addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  ed.focus();
+  if (b.dataset.block) document.execCommand('formatBlock', false, b.dataset.block);
+  if (b.dataset.cmd) document.execCommand(b.dataset.cmd, false, null);
+  if (b.dataset.color) document.execCommand('foreColor', false, b.dataset.color);
+  changed(); syncToolbar();
+});
+
+function currentBlock() {
+  const sel = getSelection(); if (!sel.rangeCount) return null;
+  let n = sel.anchorNode; if (!n || !ed.contains(n)) return null;
+  while (n && n.parentNode !== ed) n = n.parentNode;
+  return n;
+}
+function syncToolbar() {
+  const blk = currentBlock(); const tag = blk && blk.nodeType === 1 ? blk.tagName.toLowerCase() : 'p';
+  toolbar.querySelectorAll('[data-block]').forEach(b => b.classList.toggle('on', b.dataset.block === (tag === 'div' ? 'p' : tag)));
+  toolbar.querySelectorAll('[data-cmd=bold],[data-cmd=italic]').forEach(b => b.classList.toggle('on', document.queryCommandState(b.dataset.cmd)));
+}
+document.addEventListener('selectionchange', () => { if (ed.contains(document.activeElement) || document.activeElement === ed) syncToolbar(); });
+
+// Paste as clean text, each line becomes its own block
+ed.addEventListener('paste', e => {
+  e.preventDefault();
+  const t = (e.clipboardData || window.clipboardData).getData('text/plain');
+  if (/\n/.test(t) || /^#{1,4}\s/.test(t)) document.execCommand('insertHTML', false, textToHTML(t.trim()));
+  else document.execCommand('insertText', false, t);
+});
+ed.addEventListener('input', changed);
+
+$('sampleBtn').onclick = () => { ed.innerHTML = textToHTML(SAMPLE); changed(); };
+$('clearBtn').onclick = () => { ed.innerHTML = '<h1><br></h1>'; ed.focus(); changed(); };
+
+// ---------- layout: editor DOM → styled lines ----------
+const BLOCK = {
+  H1: { size: 92, lh: 1.15, before: 70 },
+  H2: { size: 62, lh: 1.25, before: 30 },
+  P:  { size: 50, lh: 1.45, before: 10 },
+  H4: { size: 38, lh: 1.4,  before: 8 },
+};
+const GAP = 40;
+const look = { font: 'Manrope', bg: '#000000', img: null, imgURL: null, dim: 0.45, tone: 'light' };
+const fontStr = (r, px) => `${r.italic ? 'italic ' : ''}${r.weight} ${px}px "${look.font}", "Segoe UI", Arial, sans-serif`;
+
+function runsOf(block) {
+  const runs = [];
+  const walk = node => {
+    for (const c of node.childNodes) {
+      if (c.nodeType === 3) {
+        if (!c.nodeValue) continue;
+        const cs = getComputedStyle(c.parentElement);
+        const w = parseInt(cs.fontWeight, 10) || 500;
+        runs.push({ text: c.nodeValue, weight: w >= 750 ? 800 : w >= 600 ? 700 : w >= 450 ? 500 : 400,
+                    italic: cs.fontStyle === 'italic', color: cs.color });
+      } else if (c.nodeName === 'BR') runs.push({ br: true });
+      else if (c.nodeType === 1) walk(c);
+    }
+  };
+  walk(block);
+  return runs;
+}
+
+function layout() {
+  const k = sizeEl.value / 100, maxW = W - PAD * 2, lines = [];
+  let y = 0, first = true;
+  for (const block of ed.children) {
+    const st = BLOCK[block.tagName] || BLOCK.P;
+    const runs = runsOf(block);
+    if (!block.textContent.trim()) { y += GAP * k; continue; }
+    if (!first) y += st.before * k; first = false;
+    const px = Math.round(st.size * k), lh = px * st.lh;
+
+    // tokens: words and single spaces, each with its own style
+    const toks = [];
+    for (const r of runs) {
+      if (r.br) { toks.push({ br: true }); continue; }
+      for (const part of r.text.split(/(\s+)/)) {
+        if (!part) continue;
+        const space = /^\s+$/.test(part), text = space ? ' ' : part;
+        ctx.font = fontStr(r, px);
+        toks.push({ text, space, font: ctx.font, color: r.color, w: ctx.measureText(text).width });
+      }
+    }
+    let cur = [], curW = 0;
+    const flush = () => {
+      while (cur.length && cur[cur.length - 1].space) curW -= cur.pop().w;
+      if (cur.length) { y += lh; lines.push({ y, toks: cur, w: curW, px }); }
+      cur = []; curW = 0;
+    };
+    for (const t of toks) {
+      if (t.br) { flush(); continue; }
+      if (t.space && !cur.length) continue;
+      if (!t.space && cur.length && curW + t.w > maxW) flush();
+      cur.push(t); curW += t.w;
+    }
+    flush();
+  }
+  return { lines, height: y };
+}
+
+let L = { lines: [], height: 0 };
+
+function drawBg() {
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = look.bg; ctx.fillRect(0, 0, W, H);
+  if (look.img) {
+    const im = look.img, sc = Math.max(W / im.width, H / im.height);
+    const w = im.width * sc, h = im.height * sc;
+    ctx.drawImage(im, (W - w) / 2, (H - h) / 2, w, h);
+    if (look.dim > 0) { ctx.fillStyle = `rgba(0,0,0,${look.dim})`; ctx.fillRect(0, 0, W, H); }
+  }
+}
+function draw(p) {
+  const sc = cv.width / W; ctx.setTransform(sc, 0, 0, sc, 0, 0);
+  drawBg();
+  const travel = H + L.height + 40;
+  const offset = H - p * travel;
+  const center = alignEl.value === 'center';
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  for (const ln of L.lines) {
+    const y = offset + ln.y;
+    if (y < -60 || y > H + 160) continue;
+    ctx.globalAlpha = Math.max(0, Math.min(y / 260, (H - y + 60) / 260, 1)); // soft fade at edges
+    let x = center ? (W - ln.w) / 2 : PAD;
+    const by = y - ln.px * 0.22;
+    for (const t of ln.toks) { ctx.font = t.font; ctx.fillStyle = t.color; ctx.fillText(t.text, x, by); x += t.w; }
+  }
+  ctx.globalAlpha = 1;
+}
+
+let raf = null, playing = false, startT = 0;
+function loop(onDone) {
+  const dur = durEl.value * 1000;
+  const tick = now => {
+    const p = Math.min((now - startT) / dur, 1);
+    draw(p); $('prog').style.width = (p * 100) + '%';
+    if (p < 1 && playing) raf = requestAnimationFrame(tick);
+    else { playing = false; onDone && onDone(p >= 1); }
+  };
+  raf = requestAnimationFrame(tick);
+}
+
+let saveT = null;
+function changed() {
+  L = layout(); if (!playing) draw(0.18);
+  clearTimeout(saveT);
+  saveT = setTimeout(() => { try { localStorage.setItem('reel-html', ed.innerHTML); } catch (e) {} }, 400);
+}
+function qualityText() {
+  const q = QUALITY[$('quality').value];
+  $('status').textContent = `${q.label} MP4 · 30 fps` + (q.w > 1080 ? ' · bigger file, takes longer' : ' · ready in a few seconds.');
+}
+$('quality').addEventListener('change', () => { qualityText(); try { localStorage.setItem('reel-quality', $('quality').value); } catch (e) {} });
+try { const q = localStorage.getItem('reel-quality'); if (q && QUALITY[q]) $('quality').value = q; } catch (e) {}
+function settings() {
+  $('durVal').textContent = durEl.value + ' s';
+  $('sizeVal').textContent = sizeEl.value + '%';
+  ed.classList.toggle('left', alignEl.value === 'left');
+  changed();
+}
+[durEl, sizeEl, alignEl].forEach(el => el.addEventListener('input', settings));
+
+// ================= LOOK =================
+const TONES = {
+  light: { txt: '#ffffff', body: 'rgba(255,255,255,0.88)', dim: 'rgba(255,255,255,0.72)' },
+  dark:  { txt: '#111111', body: 'rgba(17,17,17,0.88)',    dim: 'rgba(17,17,17,0.68)' },
+};
+function applyLook(save = true) {
+  const t = TONES[look.tone];
+  ed.style.setProperty('--txt', t.txt); ed.style.setProperty('--txt-body', t.body); ed.style.setProperty('--txt-dim', t.dim);
+  ed.style.setProperty('--font', `"${look.font}"`);
+  ed.style.backgroundColor = look.bg;
+  ed.style.backgroundImage = look.imgURL ? `linear-gradient(rgba(0,0,0,${look.dim}),rgba(0,0,0,${look.dim})),url("${look.imgURL}")` : 'none';
+  $('bgs').querySelectorAll('.bgsw').forEach(b => b.classList.toggle('on', b.dataset.bg === look.bg));
+  $('tone').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.tone === look.tone));
+  $('fontSel').value = look.font;
+  $('imgRemove').hidden = !look.img; $('dimWrap').hidden = !look.img;
+  $('dimVal').textContent = Math.round(look.dim * 100) + '%';
+  if (save) try { localStorage.setItem('reel-look', JSON.stringify({ font: look.font, bg: look.bg, tone: look.tone, dim: look.dim })); } catch (e) {}
+  changed();
+}
+const isLight = hex => { const n = parseInt(hex.slice(1), 16); return (0.299 * (n >> 16) + 0.587 * (n >> 8 & 255) + 0.114 * (n & 255)) > 150; };
+function setBg(hex) { look.bg = hex; if (!look.img) look.tone = isLight(hex) ? 'dark' : 'light'; applyLook(); }
+
+$('bgs').addEventListener('click', e => { const b = e.target.closest('.bgsw'); if (b) setBg(b.dataset.bg); });
+$('bgCustom').addEventListener('input', e => setBg(e.target.value));
+$('tone').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { look.tone = b.dataset.tone; applyLook(); } });
+$('fontSel').addEventListener('change', async e => {
+  look.font = e.target.value;
+  await Promise.all(['400', '500', '700', '800'].map(w => document.fonts.load(`${w} 50px "${look.font}"`).catch(() => {})));
+  applyLook();
+});
+$('imgBtn').onclick = () => $('imgFile').click();
+$('imgFile').addEventListener('change', () => {
+  const f = $('imgFile').files[0]; if (!f) return;
+  const url = URL.createObjectURL(f), im = new Image();
+  im.onload = () => { if (look.imgURL) URL.revokeObjectURL(look.imgURL); look.img = im; look.imgURL = url; look.tone = 'light'; applyLook(); };
+  im.src = url;
+});
+$('imgRemove').onclick = () => { if (look.imgURL) URL.revokeObjectURL(look.imgURL); look.img = null; look.imgURL = null; $('imgFile').value = ''; applyLook(); };
+$('dim').addEventListener('input', e => { look.dim = e.target.value / 100; applyLook(); });
+
+try { Object.assign(look, JSON.parse(localStorage.getItem('reel-look') || '{}')); } catch (e) {}
+$('dim').value = Math.round(look.dim * 100);
+
+// ================= MUSIC =================
+// Original music generated live with Web Audio. Routed to speakers and to the recorder.
+const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
+let A = null, master = null, recDest = null, engine = null, upAudio = null;
+let track = 'lofi', musicOn = false, fileSrc = null;
+
+// Built-in tracks are MP3 files in the music/ folder next to this page.
+// Change MUSIC_BASE to a full URL if you host the files somewhere else.
+const MUSIC_BASE = window.MUSIC_BASE || 'music/';
+const TRACK_FILES = { lofi: 'lofi-study.mp3', piano: 'soft-piano.mp3', calm: 'calm-pad.mp3', upbeat: 'upbeat-pop.mp3' };
+const trackBytes = {}, trackBufs = {};
+async function trackData(name) {
+  if (!TRACK_FILES[name]) return null;
+  if (name in trackBytes) return trackBytes[name];
+  try { const r = await fetch(MUSIC_BASE + TRACK_FILES[name]); if (!r.ok) throw 0; trackBytes[name] = await r.arrayBuffer(); }
+  catch (e) { trackBytes[name] = null; }   // file not reachable: generate the track live instead
+  return trackBytes[name];
+}
+
+function ensureAudio() {
+  if (A) return;
+  A = new (window.AudioContext || window.webkitAudioContext)();
+  master = A.createGain(); master.gain.value = 0;
+  const comp = A.createDynamicsCompressor();
+  comp.threshold.value = -16; comp.ratio.value = 4;
+  master.connect(comp);
+  comp.connect(A.destination);
+  recDest = A.createMediaStreamDestination();
+  comp.connect(recDest);
+  engine = new Engine(A, master);
+}
+
+class Engine {
+  constructor(a, out) {
+    this.a = a; this.out = out;
+    const len = a.sampleRate * 1.5;
+    this.noise = a.createBuffer(1, len, a.sampleRate);
+    const d = this.noise.getChannelData(0); for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    const rl = a.sampleRate * 2.6;
+    this.impulse = a.createBuffer(2, rl, a.sampleRate);
+    for (let c = 0; c < 2; c++) { const x = this.impulse.getChannelData(c); for (let i = 0; i < rl; i++) x[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / rl, 3); }
+  }
+  build(name) {
+    const a = this.a, st = STYLES[name]; if (!st) return false;
+    this.style = st;
+    this.bus = a.createGain(); this.bus.gain.value = st.level;
+    const tone = a.createBiquadFilter(); tone.type = 'lowpass'; tone.frequency.value = st.tone;
+    const conv = a.createConvolver(); conv.buffer = this.impulse;
+    const wet = a.createGain(); wet.gain.value = st.wet;
+    this.dry = a.createGain();
+    this.dry.connect(tone); this.dry.connect(conv); conv.connect(wet); wet.connect(tone);
+    tone.connect(this.bus); this.bus.connect(this.out);
+    this.step = 0;
+    return true;
+  }
+  start(name) {
+    this.stop();
+    if (!this.build(name)) return;
+    this.next = this.a.currentTime + 0.08;
+    this.timer = setInterval(() => this.tick(), 25);
+  }
+  scheduleAll(name, seconds) {         // offline: queue every note up front
+    if (!this.build(name)) return;
+    this.next = 0.02;
+    const sd = 60 / this.style.bpm / 4;
+    while (this.next < seconds) this.playStep(sd);
+  }
+  playStep(sd) {
+    const st = this.style;
+    const ch = st.chords[Math.floor(this.step / 16) % st.chords.length];
+    st.play(this, this.step % 16, this.next, ch, sd, Math.floor(this.step / 16));
+    this.next += sd; this.step++;
+  }
+  tick() {
+    const sd = 60 / this.style.bpm / 4;
+    while (this.next < this.a.currentTime + 0.2) this.playStep(sd);
+  }
+  stop() {
+    if (!this.bus) return;
+    clearInterval(this.timer);
+    const b = this.bus; b.gain.setTargetAtTime(0, this.a.currentTime, 0.12);
+    setTimeout(() => b.disconnect(), 1500);
+    this.bus = null;
+  }
+  env(t, v, att, dec) {
+    const g = this.a.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(v, t + att);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + att + dec);
+    g.connect(this.dry); return g;
+  }
+  osc(type, f, t, end, dest, detune = 0) {
+    const o = this.a.createOscillator(); o.type = type; o.frequency.value = f; o.detune.value = detune;
+    o.connect(dest); o.start(t); o.stop(end); return o;
+  }
+  keys(t, n, v, dec = 1.6) {          // soft electric-piano tone
+    const g = this.env(t, v, 0.008, dec);
+    const lp = this.a.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2400; lp.connect(g);
+    this.osc('triangle', mtof(n), t, t + dec + 0.1, lp);
+    const g2 = this.a.createGain(); g2.gain.value = 0.25; g2.connect(lp);
+    this.osc('sine', mtof(n + 12), t, t + dec + 0.1, g2);
+  }
+  pad(t, notes, dur, v = 0.04) {
+    const g = this.a.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(v, t + Math.min(1.2, dur * 0.4));
+    g.gain.setValueAtTime(v, t + dur * 0.8);
+    g.gain.linearRampToValueAtTime(0.0001, t + dur + 0.8);
+    const lp = this.a.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 900; lp.connect(g); g.connect(this.dry);
+    for (const n of notes) { this.osc('sawtooth', mtof(n), t, t + dur + 1, lp, -7); this.osc('sawtooth', mtof(n), t, t + dur + 1, lp, 7); }
+  }
+  pluck(t, n, v) {
+    const g = this.env(t, v, 0.004, 0.32);
+    const lp = this.a.createBiquadFilter(); lp.type = 'lowpass';
+    lp.frequency.setValueAtTime(3200, t); lp.frequency.exponentialRampToValueAtTime(500, t + 0.22); lp.connect(g);
+    this.osc('sawtooth', mtof(n), t, t + 0.4, lp);
+  }
+  bass(t, n, dur, v) {
+    const g = this.env(t, v, 0.01, dur);
+    this.osc('triangle', mtof(n), t, t + dur + 0.1, g);
+    const g2 = this.a.createGain(); g2.gain.value = 0.6; g2.connect(g);
+    this.osc('sine', mtof(n), t, t + dur + 0.1, g2);
+  }
+  kick(t, v) {
+    const g = this.a.createGain(); g.connect(this.dry);
+    g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.38);
+    const o = this.osc('sine', 140, t, t + 0.4, g);
+    o.frequency.setValueAtTime(140, t); o.frequency.exponentialRampToValueAtTime(42, t + 0.14);
+  }
+  noiseHit(t, v, type, f, dec) {
+    const s = this.a.createBufferSource(); s.buffer = this.noise;
+    const fl = this.a.createBiquadFilter(); fl.type = type; fl.frequency.value = f;
+    const g = this.env(t, v, 0.002, dec);
+    s.connect(fl); fl.connect(g); s.start(t); s.stop(t + dec + 0.05);
+  }
+  snare(t, v) { this.noiseHit(t, v, 'bandpass', 1800, 0.18); }
+  hat(t, v) { this.noiseHit(t, v, 'highpass', 7500, 0.04); }
+}
+
+const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+const STYLES = {
+  piano: { bpm: 76, level: 1, tone: 9000, wet: 0.45,
+    chords: [{ r: 36, v: [60, 64, 67, 72] }, { r: 43, v: [59, 62, 67, 71] }, { r: 45, v: [60, 64, 69, 72] }, { r: 41, v: [60, 65, 69, 72] }],
+    play(e, s, t, c, sd) {
+      if (s === 0) { e.keys(t, c.r + 12, 0.16, 3.2); e.keys(t, c.r + 24, 0.09, 3); }
+      if (s % 2 === 0) e.keys(t, c.v[[0, 1, 2, 3, 2, 1, 2, 1][s / 2]], 0.1 + Math.random() * 0.03, 1.8);
+    } },
+  lofi: { bpm: 78, level: 1, tone: 2800, wet: 0.3,
+    chords: [{ r: 41, v: [57, 60, 64, 65] }, { r: 40, v: [55, 59, 62, 64] }, { r: 38, v: [53, 57, 60, 62] }, { r: 36, v: [52, 55, 59, 60] }],
+    play(e, s, t, c, sd) {
+      const sw = (s % 4 === 2) ? sd * 0.28 : 0;      // swing
+      if (s === 0 || s === 10) { c.v.forEach((n, i) => e.keys(t + sw + i * 0.014, n, 0.065, 2.4)); e.bass(t + sw, c.r, sd * 5, 0.3); }
+      if (s === 0 || s === 7 || s === 10) e.kick(t + sw, s === 0 ? 0.7 : 0.5);
+      if (s === 4 || s === 12) e.snare(t, 0.16);
+      if (s % 2 === 0) e.hat(t + sw, s % 4 === 0 ? 0.05 : 0.03);
+    } },
+  calm: { bpm: 60, level: 1, tone: 6000, wet: 0.6,
+    chords: [{ r: 36, v: [60, 64, 67, 71] }, { r: 45, v: [57, 60, 64, 67] }, { r: 41, v: [57, 60, 65, 69] }, { r: 43, v: [55, 59, 62, 67] }],
+    play(e, s, t, c, sd) {
+      if (s === 0) { e.pad(t, c.v, sd * 16, 0.035); e.bass(t, c.r, sd * 14, 0.12); }
+      if ((s === 0 || s === 6 || s === 10) && Math.random() < 0.7) e.keys(t, pick(c.v) + 12, 0.05, 3.5);
+    } },
+  upbeat: { bpm: 112, level: 0.85, tone: 10000, wet: 0.2,
+    chords: [{ r: 45, v: [57, 60, 64, 69] }, { r: 41, v: [57, 60, 65, 69] }, { r: 36, v: [55, 60, 64, 67] }, { r: 43, v: [55, 59, 62, 67] }],
+    play(e, s, t, c, sd) {
+      if (s % 4 === 0) e.kick(t, 0.75);
+      if (s === 4 || s === 12) e.snare(t, 0.22);
+      e.hat(t, s % 4 === 2 ? 0.07 : 0.022);
+      e.pluck(t, c.v[[0, 2, 1, 3][s % 4]] + (s >= 8 ? 12 : 0), 0.06);
+      if (s % 2 === 0) e.bass(t, c.r + (s % 4 === 2 ? 12 : 0), sd * 1.6, 0.26);
+      if (s === 0) e.pad(t, c.v, sd * 16, 0.02);
+    } },
+};
+
+function volume() { return $('vol').value / 100; }
+
+async function startMusic(totalSec) {
+  if (track === 'none') return false;
+  if (track === 'upload' && !$('music').files[0]) return false;
+  ensureAudio();
+  await A.resume();
+  stopMusic(true);
+  let buf = null;
+  if (track !== 'upload') {
+    const data = await trackData(track);
+    if (data) buf = trackBufs[track] || (trackBufs[track] = await A.decodeAudioData(data.slice(0)));
+  }
+  const now = A.currentTime, v = volume();
+  master.gain.cancelScheduledValues(now);
+  master.gain.setValueAtTime(0, now);
+  master.gain.linearRampToValueAtTime(v, now + 1);
+  if (totalSec) {                                   // fade out over the last 2 seconds
+    master.gain.setValueAtTime(v, now + Math.max(1, totalSec - 2));
+    master.gain.linearRampToValueAtTime(0, now + totalSec);
+  }
+  if (track === 'upload') {
+    upAudio = new Audio(URL.createObjectURL($('music').files[0])); upAudio.loop = true;
+    A.createMediaElementSource(upAudio).connect(master);
+    await upAudio.play();
+  } else if (buf) {
+    fileSrc = A.createBufferSource(); fileSrc.buffer = buf; fileSrc.loop = true;
+    fileSrc.connect(master); fileSrc.start();
+  } else engine.start(track);
+  musicOn = true;
+  return true;
+}
+function stopMusic(instant) {
+  if (!A) return;
+  if (!instant) master.gain.setTargetAtTime(0, A.currentTime, 0.15);
+  engine.stop();
+  if (fileSrc) { const f = fileSrc; fileSrc = null; try { f.stop(A.currentTime + (instant ? 0 : 0.5)); } catch (e) {} }
+  if (upAudio) { const u = upAudio; upAudio = null; setTimeout(() => u.pause(), instant ? 0 : 500); }
+  musicOn = false;
+  $('listenBtn').textContent = '▶ Listen';
+}
+
+$('tracks').addEventListener('click', async e => {
+  const b = e.target.closest('.track'); if (!b) return;
+  if (b.dataset.track === 'upload' && !$('music').files[0]) { $('music').click(); }
+  track = b.dataset.track;
+  $('tracks').querySelectorAll('.track').forEach(x => x.classList.toggle('on', x === b));
+  if (musicOn && !playing) { const ok = await startMusic(); $('listenBtn').textContent = ok ? '■ Stop' : '▶ Listen'; }
+});
+$('music').addEventListener('change', () => {
+  const f = $('music').files[0];
+  if (f) $('tracks').querySelector('[data-track=upload] span').textContent = f.name;
+});
+$('vol').addEventListener('input', () => {
+  $('volVal').textContent = $('vol').value + '%';
+  if (A && musicOn) master.gain.setTargetAtTime(volume(), A.currentTime, 0.05);
+});
+$('listenBtn').onclick = async () => {
+  if (musicOn) { stopMusic(); return; }
+  const ok = await startMusic();
+  $('listenBtn').textContent = ok ? '■ Stop' : '▶ Listen';
+  if (!ok && track === 'upload') $('music').click();
+};
+
+// ================= PREVIEW & RECORD =================
+$('playBtn').onclick = async () => {
+  if (playing) { playing = false; cancelAnimationFrame(raf); stopMusic(); $('playBtn').textContent = 'Play preview'; changed(); return; }
+  L = layout(); playing = true;
+  if (innerWidth <= 860) cv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  await startMusic(+durEl.value);
+  startT = performance.now();
+  $('playBtn').textContent = 'Stop';
+  loop(() => { $('playBtn').textContent = 'Play preview'; stopMusic(); });
+};
+
+function pickMime() {
+  const opts = ['video/mp4;codecs=avc1.640028,mp4a.40.2', 'video/mp4;codecs=avc1,mp4a.40.2', 'video/mp4',
+                'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
+  return opts.find(m => window.MediaRecorder && MediaRecorder.isTypeSupported(m)) || '';
+}
+
+// ---------- export: always H.264 video + AAC audio in MP4 ----------
+// 1) Browser encoders (WebCodecs) when it has H.264 / AAC: fastest, no extra download.
+// 2) Otherwise a built-in converter (ffmpeg.wasm, ~32 MB, loaded once) turns the
+//    result into H.264 + AAC so it plays everywhere, including Instagram and WhatsApp.
+const FPS = 30, SR = 48000;
+const FF_BASE = window.FF_BASE || 'https://unpkg.com/';
+const FF = {
+  lib:    FF_BASE + '@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js',
+  worker: FF_BASE + '@ffmpeg/ffmpeg@0.12.10/dist/umd/814.ffmpeg.js',
+  core:   FF_BASE + '@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js',
+  wasm:   FF_BASE + '@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm',
+};
+
+async function firstSupported(list, check) {
+  for (const cfg of list) { try { if ((await check(cfg)).supported) return cfg; } catch (e) {} }
+  return null;
+}
+const pickH264 = () => firstSupported(['avc1.640033', 'avc1.640028', 'avc1.4d0033', 'avc1.42003e'].map(codec =>
+  ({ codec, width: OUT.w, height: OUT.h, bitrate: OUT.bitrate, framerate: FPS, avc: { format: 'avc' } })), c => VideoEncoder.isConfigSupported(c));
+const pickOtherVideo = () => firstSupported([
+  { codec: 'vp09.00.41.08', mux: 'vp9' }, { codec: 'av01.0.08M.08', mux: 'av1' }].map(o =>
+  ({ codec: o.codec, mux: o.mux, width: OUT.w, height: OUT.h, bitrate: Math.round(OUT.bitrate * 1.25), framerate: FPS })),
+  c => VideoEncoder.isConfigSupported({ codec: c.codec, width: c.width, height: c.height, bitrate: c.bitrate, framerate: c.framerate }));
+const AAC_CFG = { codec: 'mp4a.40.2', sampleRate: SR, numberOfChannels: 2, bitrate: 160_000 };
+async function aacSupported() {
+  try { return window.AudioEncoder && (await AudioEncoder.isConfigSupported(AAC_CFG)).supported; } catch (e) { return false; }
+}
+// kept for older callers
+const pickVideoCodec = pickH264;
+
+async function renderMusic(seconds) {
+  const off = new OfflineAudioContext(2, Math.ceil(SR * seconds), SR);
+  const m = off.createGain();
+  const comp = off.createDynamicsCompressor(); comp.threshold.value = -16; comp.ratio.value = 4;
+  m.connect(comp); comp.connect(off.destination);
+  const v = volume();
+  m.gain.setValueAtTime(0, 0);
+  m.gain.linearRampToValueAtTime(v, 1);
+  m.gain.setValueAtTime(v, Math.max(1, seconds - 2));
+  m.gain.linearRampToValueAtTime(0, seconds);
+  if (track === 'upload') {
+    const buf = await off.decodeAudioData(await $('music').files[0].arrayBuffer());
+    const src = off.createBufferSource(); src.buffer = buf; src.loop = true; src.connect(m); src.start(0);
+  } else {
+    const data = await trackData(track);
+    if (data) {
+      const src = off.createBufferSource(); src.buffer = await off.decodeAudioData(data.slice(0));
+      src.loop = true; src.connect(m); src.start(0);
+    } else new Engine(off, m).scheduleAll(track, seconds);
+  }
+  return off.startRendering();
+}
+
+function toWav(buf) {
+  const n = buf.length, L0 = buf.getChannelData(0), R0 = buf.getChannelData(1);
+  const out = new DataView(new ArrayBuffer(44 + n * 4));
+  const str = (o, t) => { for (let i = 0; i < t.length; i++) out.setUint8(o + i, t.charCodeAt(i)); };
+  str(0, 'RIFF'); out.setUint32(4, 36 + n * 4, true); str(8, 'WAVE'); str(12, 'fmt ');
+  out.setUint32(16, 16, true); out.setUint16(20, 1, true); out.setUint16(22, 2, true);
+  out.setUint32(24, SR, true); out.setUint32(28, SR * 4, true); out.setUint16(32, 4, true); out.setUint16(34, 16, true);
+  str(36, 'data'); out.setUint32(40, n * 4, true);
+  for (let i = 0, o = 44; i < n; i++, o += 4) {
+    out.setInt16(o, Math.max(-1, Math.min(1, L0[i])) * 0x7fff, true);
+    out.setInt16(o + 2, Math.max(-1, Math.min(1, R0[i])) * 0x7fff, true);
+  }
+  return new Uint8Array(out.buffer);
+}
+
+const tick0 = () => new Promise(r => setTimeout(r, 0));
+const setProg = (pct, text) => { $('prog').style.width = pct + '%'; if (text) $('status').textContent = text; };
+
+let ffmpeg = null;
+async function loadFFmpeg() {
+  if (ffmpeg) return ffmpeg;
+  setProg(0, 'Loading video converter (about 32 MB, first time only)…');
+  if (!window.FFmpegWASM) await new Promise((ok, bad) => {
+    const sc = document.createElement('script'); sc.src = FF.lib; sc.onload = ok; sc.onerror = () => bad(new Error('converter-load')); document.head.appendChild(sc);
+  });
+  const blobURL = async (url, type) => URL.createObjectURL(new Blob([await (await fetch(url)).arrayBuffer()], { type }));
+  const [classWorkerURL, coreURL, wasmURL] = await Promise.all([
+    blobURL(FF.worker, 'text/javascript'), blobURL(FF.core, 'text/javascript'), blobURL(FF.wasm, 'application/wasm')]);
+  const f = new FFmpegWASM.FFmpeg();
+  await f.load({ classWorkerURL, coreURL, wasmURL });
+  ffmpeg = f;
+  return f;
+}
+
+async function encodeVideo(cfg, muxCodec) {
+  const muxer = new Mp4Muxer.Muxer({
+    target: new Mp4Muxer.ArrayBufferTarget(),
+    video: { codec: muxCodec, width: OUT.w, height: OUT.h, frameRate: FPS },
+    fastStart: 'in-memory', firstTimestampBehavior: 'offset',
+  });
+  let failed = null;
+  const venc = new VideoEncoder({ output: (c, m) => muxer.addVideoChunk(c, m), error: e => failed = e });
+  const { mux, ...encCfg } = cfg; venc.configure(encCfg);
+  const total = Math.round(+durEl.value * FPS);
+  for (let i = 0; i < total; i++) {
+    if (failed) throw failed;
+    draw(i / (total - 1));
+    const frame = new VideoFrame(cv, { timestamp: Math.round(i * 1e6 / FPS), duration: Math.round(1e6 / FPS) });
+    venc.encode(frame, { keyFrame: i % (FPS * 2) === 0 });
+    frame.close();
+    while (venc.encodeQueueSize > 8) await tick0();
+    if (i % 15 === 0) { setProg(Math.round(i / total * 100), `Rendering video… ${Math.round(i / total * 100)}%`); await tick0(); }
+  }
+  await venc.flush(); venc.close();
+  if (failed) throw failed;
+  return { muxer, venc };
+}
+
+// Everything in one pass when the browser has both H.264 and AAC encoders
+async function exportNative(vcfg, audioBuf) {
+  const muxer = new Mp4Muxer.Muxer({
+    target: new Mp4Muxer.ArrayBufferTarget(),
+    video: { codec: 'avc', width: OUT.w, height: OUT.h, frameRate: FPS },
+    audio: audioBuf ? { codec: 'aac', numberOfChannels: 2, sampleRate: SR } : undefined,
+    fastStart: 'in-memory', firstTimestampBehavior: 'offset',
+  });
+  let failed = null;
+  const venc = new VideoEncoder({ output: (c, m) => muxer.addVideoChunk(c, m), error: e => failed = e });
+  venc.configure(vcfg);
+  const aenc = audioBuf ? new AudioEncoder({ output: (c, m) => muxer.addAudioChunk(c, m), error: e => failed = e }) : null;
+  if (aenc) aenc.configure(AAC_CFG);
+
+  const total = Math.round(+durEl.value * FPS);
+  const L0 = audioBuf && audioBuf.getChannelData(0), R0 = audioBuf && audioBuf.getChannelData(1);
+  let aPos = 0;
+  const feedAudio = untilSec => {             // interleave audio with video as we go
+    if (!aenc) return;
+    const end = Math.min(L0.length, Math.ceil(untilSec * SR));
+    while (aPos < end) {
+      const n = Math.min(4800, end - aPos);
+      const data = new Float32Array(n * 2);
+      data.set(L0.subarray(aPos, aPos + n), 0); data.set(R0.subarray(aPos, aPos + n), n);
+      const ad = new AudioData({ format: 'f32-planar', sampleRate: SR, numberOfFrames: n, numberOfChannels: 2,
+                                 timestamp: Math.round(aPos / SR * 1e6), data });
+      aenc.encode(ad); ad.close(); aPos += n;
+    }
+  };
+  for (let i = 0; i < total; i++) {
+    if (failed) throw failed;
+    draw(i / (total - 1));
+    const frame = new VideoFrame(cv, { timestamp: Math.round(i * 1e6 / FPS), duration: Math.round(1e6 / FPS) });
+    venc.encode(frame, { keyFrame: i % (FPS * 2) === 0 });
+    frame.close();
+    feedAudio((i + 1) / FPS);
+    while (venc.encodeQueueSize > 8) await tick0();
+    if (i % 15 === 0) { setProg(Math.round(i / total * 100), `Rendering video… ${Math.round(i / total * 100)}%`); await tick0(); }
+  }
+  feedAudio(Infinity);
+  await venc.flush(); venc.close();
+  if (aenc) { await aenc.flush(); aenc.close(); }
+  if (failed) throw failed;
+  muxer.finalize();
+  return new Blob([muxer.target.buffer], { type: 'video/mp4' });
+}
+
+async function fastExport() {
+  const seconds = +durEl.value;
+  const withMusic = track !== 'none' && !(track === 'upload' && !$('music').files[0]);
+  const h264 = await pickH264();
+  const aac = withMusic ? await aacSupported() : true;
+
+  await document.fonts.ready;
+  L = layout();
+  setProg(0, withMusic ? 'Mixing music…' : 'Preparing…');
+  const audioBuf = withMusic ? await renderMusic(seconds) : null;
+
+  if (h264 && aac) { saveBlob(await exportNative(h264, audioBuf), 'mp4'); setProg(100); return true; }
+
+  // Converter path
+  const other = h264 ? null : await pickOtherVideo();
+  if (!h264 && !other) return false;
+  const vcfg = h264 || other;
+  const { muxer } = await encodeVideo(vcfg, h264 ? 'avc' : vcfg.mux);
+  muxer.finalize();
+  const videoBytes = new Uint8Array(muxer.target.buffer);
+
+  const f = await loadFFmpeg();
+  await f.writeFile('v.mp4', videoBytes);
+  const args = ['-i', 'v.mp4'];
+  if (audioBuf) { await f.writeFile('a.wav', toWav(audioBuf)); args.push('-i', 'a.wav', '-map', '0:v:0', '-map', '1:a:0'); }
+  if (h264) args.push('-c:v', 'copy');
+  else args.push('-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '20', '-pix_fmt', 'yuv420p');
+  if (audioBuf) args.push('-c:a', 'aac', '-b:a', '160k');
+  args.push('-movflags', '+faststart', 'out.mp4');
+
+  const label = h264 ? 'Adding music…' : 'Converting to MP4 (this browser needs the slow path, keep this tab open)…';
+  const onProg = ({ progress }) => setProg(Math.round(Math.max(0, Math.min(1, progress)) * 100), `${label} ${Math.round(Math.max(0, Math.min(1, progress)) * 100)}%`);
+  f.on('progress', onProg);
+  setProg(0, label);
+  const code = await f.exec(args);
+  f.off('progress', onProg);
+  if (code !== 0) throw new Error('convert-failed');
+  const out = await f.readFile('out.mp4');
+  await Promise.all(['v.mp4', 'a.wav', 'out.mp4'].map(n => f.deleteFile(n).catch(() => {})));
+  saveBlob(new Blob([out.buffer], { type: 'video/mp4' }), 'mp4');
+  setProg(100);
+  return true;
+}
+
+function saveBlob(blob, ext) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = `reel-${Date.now()}.${ext}`;
+  a.textContent = `Download again (${(blob.size / 1e6).toFixed(1)} MB)`;
+  document.body.appendChild(a); a.click(); a.remove();
+  const s = $('status'); s.textContent = 'Downloaded. '; s.appendChild(a);
+}
+
+$('dlBtn').onclick = async () => {
+  playing = false; cancelAnimationFrame(raf); stopMusic(true);
+  $('playBtn').textContent = 'Play preview';
+  $('dlBtn').disabled = true; $('playBtn').disabled = true;
+  OUT = QUALITY[$('quality').value]; useOutputSize(OUT);
+  if (innerWidth <= 860) cv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  let ok = false;
+  try { ok = window.VideoEncoder && window.Mp4Muxer ? await fastExport() : false; }
+  catch (e) {
+    console.error(e);
+    if (String(e && e.message).startsWith('converter') || e instanceof TypeError) {
+      $('status').textContent = 'Could not load the video converter. Check your internet connection and try again.';
+      useOutputSize(QUALITY[1080]); $('dlBtn').disabled = false; $('playBtn').disabled = false; return;
+    }
+    ok = false;
+  }
+  if (ok) { useOutputSize(QUALITY[1080]); $('dlBtn').disabled = false; $('playBtn').disabled = false; draw(0.18); return; }
+  await recordRealtime();   // fallback for browsers without WebCodecs / AAC
+}
+
+async function recordRealtime() {
+  if (!window.MediaRecorder) { $('status').textContent = 'This browser cannot make video. Use Chrome or Edge on a computer.'; $('dlBtn').disabled = false; $('playBtn').disabled = false; return; }
+  const mime = pickMime();
+  const stream = cv.captureStream(30);
+  const withMusic = track !== 'none' && !(track === 'upload' && !$('music').files[0]);
+  if (withMusic) { ensureAudio(); recDest.stream.getAudioTracks().forEach(t => stream.addTrack(t)); }
+
+  const rec = new MediaRecorder(stream, { mimeType: mime || undefined, videoBitsPerSecond: OUT.bitrate, audioBitsPerSecond: 160_000 });
+  const chunks = [];
+  rec.ondataavailable = e => e.data.size && chunks.push(e.data);
+  rec.onstop = () => {
+    stopMusic();
+    const type = rec.mimeType || mime || 'video/webm';
+    const ext = type.includes('mp4') ? 'mp4' : 'webm';
+    const blob = new Blob(chunks, { type });
+    saveBlob(blob, ext);
+    if (ext === 'webm') $('status').append(' Instagram prefers MP4; convert the WebM with any free converter.');
+    useOutputSize(QUALITY[1080]); draw(0.18);
+    $('dlBtn').disabled = false; $('playBtn').disabled = false;
+  };
+
+  $('dlBtn').disabled = true; $('playBtn').disabled = true;
+  $('status').textContent = 'Recording in real time (this browser cannot do fast export)… keep this tab visible.';
+  await document.fonts.ready;
+  L = layout(); draw(0);
+  if (withMusic) await startMusic(+durEl.value);
+  rec.start(500);
+  playing = true; startT = performance.now();
+  loop(() => setTimeout(() => rec.stop(), 300));
+}
+
+Promise.all(['800 92px', '700 62px', '500 50px'].map(f => document.fonts.load(`${f} "${look.font}"`).catch(() => {})))
+  .finally(() => { applyLook(false); settings(); });
+applyLook(false); settings(); qualityText();
+</script>
+</body>
+</html>
